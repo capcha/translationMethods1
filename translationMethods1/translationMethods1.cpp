@@ -101,6 +101,11 @@ struct Constant {
       name = _name;
       value = atoi(_value.c_str());
    }
+      
+   Constant(string _name, int _value) {
+      name = _name;
+      value = _value;
+   }
 
    bool operator < (const Constant& b) const {
       return name < b.name;
@@ -125,6 +130,12 @@ struct Int {
    Int(string _name, string _value) {
       name = _name;
       value = atoi(_value.c_str());
+      isInit = (value != -858993460) ? true : false;
+   }
+
+   Int(string _name, int _value) {
+      name = _name;
+      value = _value;
       isInit = (value != -858993460) ? true : false;
    }
 
@@ -162,9 +173,9 @@ template<typename T> struct ImmutableTable {
       fIn.close();
    }
 
-   bool getElementById(int id, string &result) {
+   bool getElementById(int id, T &result) {
       
-      if (data.size() < id) {
+      if (data.size() > id) {
          result = data[id];
          return true;
       }
@@ -172,20 +183,20 @@ template<typename T> struct ImmutableTable {
       return false;
    }
 
-   bool isExist(string elementName) {
+   bool isExist(T element) {
 
-      if (find(data.begin(), data.end(), elementName) != data.end()) {
+      if (find(data.begin(), data.end(), element) != data.end()) {
          return true;
       }
 
       return false;
    }
 
-   bool getIdByElement(string elementName, int &result) {
+   bool getIdByElement(T element, int &result) {
 
-      if (isExist(elementName)) {
+      if (isExist(element)) {
          for (int i = 0; i < data.size(); i++) {
-            if (data[i] == elementName) {
+            if (data[i] == element) {
                result = i;
                break;
             }
@@ -218,7 +229,7 @@ template<typename T> struct MutableTable {
       fIn.close();
    }
 
-   bool addElement(string element, bool value) {
+   bool addElement(T element) {
       try
       {
          data.push_back(element);
@@ -232,8 +243,8 @@ template<typename T> struct MutableTable {
       return true;
    }
 
-   bool getElementById(int id, string &result) {
-      if (data.size() < id) {
+   bool getElementById(int id, T &result) {
+      if (data.size() > id) {
          result = data[id];
          return true;
       }
@@ -241,20 +252,20 @@ template<typename T> struct MutableTable {
       return false;
    }
 
-   bool isExist(string elementName) {
+   bool isExist(T element) {
 
-      if (find(data.begin(), data.end(), elementName) != data.end()) {
+      if (find(data.begin(), data.end(), element) != data.end()) {
          return true;
       }
 
       return false;
    }
 
-   bool getIdByElement(string elementName, int& result) {
+   bool getIdByElement(T element, int& result) {
 
-      if (isExist(elementName)) {
+      if (isExist(element)) {
          for (int i = 0; i < data.size(); i++) {
-            if (data[i] == elementName) {
+            if (data[i] == element) {
                result = i;
                break;
             }
@@ -273,9 +284,16 @@ int main()
    //ImmutableTable<AlphabetUnit> alphabetTable = ImmutableTable<AlphabetUnit>("AlphabetUnit.txt");
    ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separators.txt");
    ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWords.txt");
-   MutableTable<Int> intTable = MutableTable<Int>("Int.txt");
+   //MutableTable<Int> intTable = MutableTable<Int>("Int.txt");
    MutableTable<Constant> constTable = MutableTable<Constant>("Constant.txt");
 
-   cout << wordsTable.data[0].name;
-
+   string name = "asdasdas";
+   Constant c = Constant(name, "4");
+   Constant b = Constant(name, 4);
+   constTable.addElement(c);
+   constTable.addElement(b);
+   constTable.getElementById(1, c);
+   int A;
+   constTable.getIdByElement(c, A);
+   
 }
