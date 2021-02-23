@@ -8,7 +8,10 @@ using namespace std;
 struct Operator {
    char name;
 
+   Operator() = default;
+
    Operator(char symbol) : name(symbol){}
+   Operator(string symbol) : name(symbol[0]){}
 
    bool operator < (const Operator& b) const {
       return name < b.name;
@@ -26,7 +29,11 @@ struct Operator {
 struct AlphabetUnit {
    char name;
 
+   AlphabetUnit() = default;
+
    AlphabetUnit(char symbol) : name(symbol) {}
+   AlphabetUnit(string symbol) : name(symbol[0]) {}
+
 
    bool operator < (const AlphabetUnit& b) const {
       return name < b.name;
@@ -44,7 +51,10 @@ struct AlphabetUnit {
 struct Separator {
    char name;
 
+   Separator() = default;
+
    Separator(char symbol) : name(symbol) {}
+   Separator(string symbol) : name(symbol[0]) {}
 
    bool operator < (const Operator& b) const {
       return name < b.name;
@@ -61,6 +71,8 @@ struct Separator {
 
 struct ReservedWord {
    string name;
+
+   ReservedWord() = default;
 
    ReservedWord(string _name) {
       name = _name;
@@ -81,11 +93,13 @@ struct ReservedWord {
 
 struct Constant {
    string name;
-   string value;
+   int value;
+
+   Constant() = default;
 
    Constant(string _name, string _value) {
       name = _name;
-      value = _value;
+      value = atoi(_value.c_str());
    }
 
    bool operator < (const Constant& b) const {
@@ -103,14 +117,15 @@ struct Constant {
 
 struct Int {
    string name;
-   int id;
-   string value;
+   int value;
    bool isInit;
 
-   Int(string _name, string _value, bool _isInit) {
+   Int() = default;
+
+   Int(string _name, string _value) {
       name = _name;
-      value = _value;
-      isInit = _isInit;
+      value = atoi(_value.c_str());
+      isInit = (value != -858993460) ? true : false;
    }
 
    bool operator < (const Int& b) const {
@@ -129,12 +144,10 @@ struct Int {
 template<typename T> struct ImmutableTable {
    vector<T> data;
 
-   ImmutableTable() = default;
-
    ImmutableTable(string filename) {
       int size;
-      string buf;
       T elem;
+      string buf;
       ifstream fIn(filename);
 
       fIn >> size;
@@ -148,60 +161,6 @@ template<typename T> struct ImmutableTable {
       
       fIn.close();
    }
-
-   /*ImmutableTable<Separator>(string filename) {
-      int size;
-      string buf;
-      Separator elem;
-      ifstream fIn(filename);
-
-      fIn >> size;
-      data.resize(size);
-
-      for (int i = 0; i < size; i++) {
-         fIn >> buf;
-         elem = Separator(buf);
-         data[i] = elem;
-      }
-
-      fIn.close();
-   }
-
-   ImmutableTable<ReservedWord>(string filename) {
-      int size;
-      string buf;
-      ReservedWord elem;
-      ifstream fIn(filename);
-
-      fIn >> size;
-      data.resize(size);
-
-      for (int i = 0; i < size; i++) {
-         fIn >> buf;
-         elem = ReservedWord(buf);
-            data[i] = elem;
-      }
-
-      fIn.close();
-   }
-
-   ImmutableTable<AlphabetUnit>(string filename) {
-      int size;
-      string buf;
-      AlphabetUnit elem;
-      ifstream fIn(filename);
-
-      fIn >> size;
-      data.resize(size);
-
-      for (int i = 0; i < size; i++) {
-         fIn >> buf;
-         elem = AlphabetUnit(buf);
-            data[i] = elem;
-      }
-
-      fIn.close();
-   }*/
 
    bool getElementById(int id, string &result) {
       
@@ -259,24 +218,6 @@ template<typename T> struct MutableTable {
       fIn.close();
    }
 
-   /*MutableTable<Int>(string filename) {
-      int size;
-      string name, value;
-      bool isInit;
-      Int elem;
-      ifstream fIn(filename);
-
-      fIn >> size;
-
-      for (int i = 0; i < size; i++) {
-         fIn >> name >> value >> isInit;
-         elem = Int(name, value);
-         data.push_back(elem);
-      }
-
-      fIn.close();
-   }*/
-
    bool addElement(string element, bool value) {
       try
       {
@@ -330,8 +271,10 @@ int main()
 {
    //ImmutableTable<Operator> operatorTable = ImmutableTable<Operator>("Operators.txt");
    //ImmutableTable<AlphabetUnit> alphabetTable = ImmutableTable<AlphabetUnit>("AlphabetUnit.txt");
-   //ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separator.txt");
+   ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separators.txt");
    ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWords.txt");
+   MutableTable<Int> intTable = MutableTable<Int>("Int.txt");
+   MutableTable<Constant> constTable = MutableTable<Constant>("Constant.txt");
 
    cout << wordsTable.data[0].name;
 

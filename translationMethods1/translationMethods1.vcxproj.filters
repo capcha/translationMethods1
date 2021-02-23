@@ -23,5 +23,11 @@
     <Text Include="ReservedWords.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
+    <Text Include="Separators.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="Constant.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
   </ItemGroup>
 </Project>

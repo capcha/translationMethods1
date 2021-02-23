@@ -142,7 +142,9 @@
     <ClCompile Include="translationMethods1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="Constant.txt" />
     <Text Include="ReservedWords.txt" />
+    <Text Include="Separators.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
