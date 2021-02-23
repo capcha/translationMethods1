@@ -129,36 +129,38 @@ struct Int {
 template<typename T> struct ImmutableTable {
    vector<T> data;
 
-   ImmutableTable<Operator>(string filename) {
+   ImmutableTable() = default;
+
+   ImmutableTable(string filename) {
       int size;
       string buf;
-      Operator elem;
+      T elem;
       ifstream fIn(filename);
 
-      f >> size;
+      fIn >> size;
       data.resize(size);
 
       for (int i = 0; i < size; i++) {
-         f >> buf;
-         elem = Operator(buf)
+         fIn >> buf;
+         elem = T(buf);
          data[i] = elem;
       }
       
       fIn.close();
    }
 
-   ImmutableTable<Separator>(string filename) {
+   /*ImmutableTable<Separator>(string filename) {
       int size;
       string buf;
       Separator elem;
       ifstream fIn(filename);
 
-      f >> size;
+      fIn >> size;
       data.resize(size);
 
       for (int i = 0; i < size; i++) {
-         f >> buf;
-         elem = Separator(buf)
+         fIn >> buf;
+         elem = Separator(buf);
          data[i] = elem;
       }
 
@@ -171,12 +173,12 @@ template<typename T> struct ImmutableTable {
       ReservedWord elem;
       ifstream fIn(filename);
 
-      f >> size;
+      fIn >> size;
       data.resize(size);
 
       for (int i = 0; i < size; i++) {
-         f >> buf;
-         elem = ReservedWord(buf)
+         fIn >> buf;
+         elem = ReservedWord(buf);
             data[i] = elem;
       }
 
@@ -189,17 +191,17 @@ template<typename T> struct ImmutableTable {
       AlphabetUnit elem;
       ifstream fIn(filename);
 
-      f >> size;
+      fIn >> size;
       data.resize(size);
 
       for (int i = 0; i < size; i++) {
-         f >> buf;
-         elem = AlphabetUnit(buf)
+         fIn >> buf;
+         elem = AlphabetUnit(buf);
             data[i] = elem;
       }
 
       fIn.close();
-   }
+   }*/
 
    bool getElementById(int id, string &result) {
       
@@ -211,9 +213,9 @@ template<typename T> struct ImmutableTable {
       return false;
    }
 
-   bool isExist(string dataString) {
+   bool isExist(string elementName) {
 
-      if (find(data.begin(), data.end(), dataString) != data.end()) {
+      if (find(data.begin(), data.end(), elementName) != data.end()) {
          return true;
       }
 
@@ -222,7 +224,7 @@ template<typename T> struct ImmutableTable {
 
    bool getIdByElement(string elementName, int &result) {
 
-      if (isExist(dataString)) {
+      if (isExist(elementName)) {
          for (int i = 0; i < data.size(); i++) {
             if (data[i] == elementName) {
                result = i;
@@ -240,40 +242,40 @@ template<typename T> struct ImmutableTable {
 template<typename T> struct MutableTable {
    vector<T> data;
 
-   MutableTable<Constant>(string filename) {
+   MutableTable(string filename) {
       int size;
       string name, value;
-      Constant elem;
+      T elem;
       ifstream fIn(filename);
 
-      f >> size;
+      fIn >> size;
 
       for (int i = 0; i < size; i++) {
-         f >> name >> value;
-         elem = Constant(name, value)
-            data.push_back(elem)
+         fIn >> name >> value;
+         elem = T(name, value);
+         data.push_back(elem);
       }
 
       fIn.close();
    }
 
-   MutableTable<Int>(string filename) {
+   /*MutableTable<Int>(string filename) {
       int size;
       string name, value;
       bool isInit;
       Int elem;
       ifstream fIn(filename);
 
-      f >> size;
+      fIn >> size;
 
       for (int i = 0; i < size; i++) {
-         f >> name >> value >> isInit;
-         elem = Int(name, value)
-            data.push_back(elem)
+         fIn >> name >> value >> isInit;
+         elem = Int(name, value);
+         data.push_back(elem);
       }
 
       fIn.close();
-   }
+   }*/
 
    bool addElement(string element, bool value) {
       try
@@ -298,9 +300,9 @@ template<typename T> struct MutableTable {
       return false;
    }
 
-   bool isExist(string dataString) {
+   bool isExist(string elementName) {
 
-      if (find(data.begin(), data.end(), dataString) != data.end()) {
+      if (find(data.begin(), data.end(), elementName) != data.end()) {
          return true;
       }
 
@@ -309,7 +311,7 @@ template<typename T> struct MutableTable {
 
    bool getIdByElement(string elementName, int& result) {
 
-      if (isExist(dataString)) {
+      if (isExist(elementName)) {
          for (int i = 0; i < data.size(); i++) {
             if (data[i] == elementName) {
                result = i;
@@ -321,26 +323,16 @@ template<typename T> struct MutableTable {
 
       return false;
    }
-
-
-   bool getIsInitById(int id, string& result) {
-      if (data.size() < id) {
-         result = isInitWithValue[id];
-         return true;
-      }
-
-      return false;
-   }
      
 };
 
 int main()
 {
-   ImmutableTable<Operator> operatorTable = ImmutableTable<Operator>("Operators.txt");
-   ImmutableTable<AlphabetUnit> alphabetTable = ImmutableTable<AlphabetUnit>("AlphabetUnit.txt");
-   ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separator.txt");
-   ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWord.txt");
+   //ImmutableTable<Operator> operatorTable = ImmutableTable<Operator>("Operators.txt");
+   //ImmutableTable<AlphabetUnit> alphabetTable = ImmutableTable<AlphabetUnit>("AlphabetUnit.txt");
+   //ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separator.txt");
+   ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWords.txt");
 
-   
+   cout << wordsTable.data[0].name;
 
 }
