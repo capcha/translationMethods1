@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "translationMethods1", "translationMethods1\translationMethods1.vcxproj", "{A24779AF-D554-47BF-9D61-45ED75545ECC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Debug|x64.ActiveCfg = Debug|x64
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Debug|x64.Build.0 = Debug|x64
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Debug|x86.ActiveCfg = Debug|Win32
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Debug|x86.Build.0 = Debug|Win32
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Release|x64.ActiveCfg = Release|x64
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Release|x64.Build.0 = Release|x64
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Release|x86.ActiveCfg = Release|Win32
+		{A24779AF-D554-47BF-9D61-45ED75545ECC}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {92662259-F0A1-4123-8C93-1D97117D75DC}
+	EndGlobalSection
+EndGlobal
