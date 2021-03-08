@@ -145,6 +145,7 @@
     <Text Include="Constant.txt" />
     <Text Include="ReservedWords.txt" />
     <Text Include="Separators.txt" />
+    <Text Include="Source.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

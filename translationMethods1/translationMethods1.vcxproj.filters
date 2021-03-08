@@ -29,5 +29,8 @@
     <Text Include="Constant.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
+    <Text Include="Source.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
   </ItemGroup>
 </Project>
