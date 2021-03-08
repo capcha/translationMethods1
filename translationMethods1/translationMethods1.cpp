@@ -473,16 +473,16 @@ class Translator {
                   int i;
                   bool isFound = false;
                   string str0, str1;
-                  stringstream str_stream_t;
+                  stringstream sStream;
 
                   for (i = 1; i < constant.size() && !isFound; i++) {
                      isFound = !(alphabet.isExist(str[i]) || str[i] == '.' || str[i] == ' ');
                   }
                 
-                  str_stream_t << str[i - 1];
-                  str0 = str_stream_t.str();
-                  str_stream_t << str[i];
-                  str1 = str_stream_t.str();
+                  sStream << str[i - 1];
+                  str0 = sStream.str();
+                  sStream << str[i];
+                  str1 = sStream.str();
 
                   if (!operators.isExist(str0) && !operators.isExist(str1) && !separators.isExist(str[i - 1])) {
                      fOutError << "Error: incorrect constant" << endl;
@@ -557,7 +557,7 @@ class Translator {
          return !isErrorFound;
       }
 
-      bool decommentString(string& str, bool is_changed) {
+      bool decommentString(string& str, bool isChanged) {
          if (str.size() > 0) {
             bool isChanged = false;
             size_t commentIndex = str.find("//"), commentIndex1 = str.find("/*"), commentIndex2;
@@ -634,7 +634,7 @@ class Translator {
                return false;
             }
 
-            if (is_changed) {
+            if (isChanged) {
                return decommentString(str, isChanged);
             }
 
