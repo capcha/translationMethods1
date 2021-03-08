@@ -5,29 +5,41 @@
 
 using namespace std;
 
-struct Operator {
-   char name;
+class Operator {
+   public:
+      char getName();
+
+   private: 
+      char name;
 
    Operator() = default;
 
    Operator(char symbol) : name(symbol){}
    Operator(string symbol) : name(symbol[0]){}
 
-   bool operator < (const Operator& b) const {
-      return name < b.name;
+   bool operator < (Operator& b) const {
+      return name < b.getName();
    }
 
-   bool operator > (const Operator& b) const {
-      return name > b.name;
+   bool operator > (Operator& b) const {
+      return name > b.getName();
    }
 
    bool operator == (Operator b) {
-      return name == b.name;
+      return name == b.getName();
    }
 };
 
-struct AlphabetUnit {
-   char name;
+char Operator::getName() {
+   return name;
+}
+
+class AlphabetUnit {
+   public:
+      char getName();
+
+   private: 
+      char name;
 
    AlphabetUnit() = default;
 
@@ -35,42 +47,58 @@ struct AlphabetUnit {
    AlphabetUnit(string symbol) : name(symbol[0]) {}
 
 
-   bool operator < (const AlphabetUnit& b) const {
-      return name < b.name;
+   bool operator < (AlphabetUnit& b) const {
+      return name < b.getName();
    }
 
-   bool operator > (const AlphabetUnit& b) const {
-      return name > b.name;
+   bool operator > (AlphabetUnit& b) const {
+      return name > b.getName();
    }
 
    bool operator == (AlphabetUnit b) {
-      return name == b.name;
+      return name == b.getName();
    }
 };
 
-struct Separator {
-   char name;
+char AlphabetUnit::getName() {
+   return name;
+}
+
+class Separator {
+   public:
+      char getName();
+
+   private:
+      char name;
 
    Separator() = default;
 
    Separator(char symbol) : name(symbol) {}
    Separator(string symbol) : name(symbol[0]) {}
 
-   bool operator < (const Operator& b) const {
-      return name < b.name;
+   bool operator < (Separator& b) const {
+      return name < b.getName();
    }
 
-   bool operator > (const Operator& b) const {
-      return name > b.name;
+   bool operator > (Separator& b) const {
+      return name > b.getName();
    }
 
-   bool operator == (Operator b) {
-      return name == b.name;
+   bool operator == (Separator b) {
+      return name == b.getName();
    }
 };
 
+char Separator::getName() {
+   return name;
+}
+
 struct ReservedWord {
-   string name;
+   public:
+      string getName();
+
+   private:
+      string name;
 
    ReservedWord() = default;
 
@@ -78,18 +106,22 @@ struct ReservedWord {
       name = _name;
    }
 
-   bool operator < (const ReservedWord& b) const {
-      return name < b.name;
+   bool operator < (ReservedWord& b) const {
+      return name < b.getName();
    }
 
-   bool operator > (const ReservedWord& b) const {
-      return name > b.name;
+   bool operator > (ReservedWord& b) const {
+      return name > b.getName();
    }
 
    bool operator == (ReservedWord b) {
-      return name == b.name;
+      return name == b.getName();
    }
 };
+
+string ReservedWord::getName() {
+   return name;
+}
 
 struct Constant {
    string name;
@@ -208,7 +240,7 @@ template<typename T> struct ImmutableTable {
    }
 
 };
-
+\ 
 template<typename T> struct MutableTable {
    vector<T> data;
 
