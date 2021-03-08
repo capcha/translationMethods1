@@ -353,7 +353,7 @@ template<typename T> class MutableTable {
          return false;
       }
 
-      bool getIdByElement(Int element, int& result) {
+      bool getIdByElement(T element, int& result) {
 
          if (isExist(element)) {
             for (int i = 0; i < data.size(); i++) {
@@ -368,20 +368,6 @@ template<typename T> class MutableTable {
          return false;
       }
 
-      bool getIdByElement(Constant element, int& result) {
-
-         if (isExist(element)) {
-            for (int i = 0; i < data.size(); i++) {
-               if (data[i] == element) {
-                  result = i;
-                  break;
-               }
-            }
-            return true;
-         }
-
-         return false;
-      }
 
       bool getIdByElement(string name, int& result) {
 
@@ -526,7 +512,7 @@ class Translator {
                      Constant newConst = Constant(constant);
                      constants.addElement(constant);
                      int tableId, chain;
-                     integers.getIdByElement(newConst, tableId);
+                     constants.getIdByElement(newConst, tableId);
                      fOutToken << 6 << '\t'  << tableId << '\t' << newConst.getValue() << '\t' << endl;
                   }
 
