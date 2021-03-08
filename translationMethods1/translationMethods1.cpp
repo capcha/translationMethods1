@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <iterator>
 
 using namespace std;
 
@@ -95,6 +96,9 @@ class ReservedWord {
 
       ReservedWord() = default;
 
+      ReservedWord(char _name) {
+         name = _name;
+      }
       ReservedWord(string _name) {
          name = _name;
       }
@@ -240,6 +244,28 @@ template<typename T> class ImmutableTable {
          return false;
       }
 
+      bool isExist(char name) {
+
+         T templateVar = T(name);
+
+         if (find(data.begin(), data.end(), templateVar) != data.end()) {
+            return true;
+         }
+
+         return false;
+      }
+
+      bool isExist(string name) {
+
+         T templateVar = T(name);
+
+         if (find(data.begin(), data.end(), templateVar) != data.end()) {
+            return true;
+         }
+
+         return false;
+      }
+
       bool getIdByElement(T element, int& result) {
 
          if (isExist(element)) {
@@ -330,6 +356,50 @@ template<typename T> class MutableTable {
       vector<T> data;
 };
 
+class Scanner {
+   public:
+      Scanner() = default;
+      
+      bool scanFile(string path, ImmutableTable<AlphabetUnit> &Alphabet, ImmutableTable<Separator> &Separators,
+                   ImmutableTable<Operator> &Operators, ImmutableTable<ReservedWord> &Words) {
+       
+         typedef istreambuf_iterator<char> buf_iter;
+         fstream file(path);
+         string buf, name;
+
+         while (file >> buf) {
+
+            for (char& c : buf) {
+               if (!Alphabet.isExist(buf)) {
+                  cerr << "UNEXPECTED SYMBOL" << endl;
+                  return false;
+               }
+            }
+   
+            if (Words.isExist(buf)) {
+               
+            } 
+
+            if (buf.size() > 1 && Separators.isExist(buf[buf.size() - 1])) {
+               continue;
+            }  
+
+            if (Operators.isExist(buf)) {
+               continue;
+            }
+            
+
+         }
+        
+      }
+
+      
+   
+   private:
+      
+};
+
+
 int main()
 {
    //ImmutableTable<Operator> operatorTable = ImmutableTable<Operator>("Operators.txt");
@@ -381,6 +451,8 @@ int main()
    c = Constant("vasdas", 2);
    if (constTable.isExist(c)) cout << "true";
    else cout << "false";
+
+   ReservedWord wew = ReservedWord('c');
 
    return 0;
    //string name = "asdasdas";
