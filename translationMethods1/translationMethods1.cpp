@@ -122,46 +122,30 @@ class ReservedWord {
 
 class Constant {
    public:
-      string getName() {
-         return name;
-      }
-
-      int getValue() {
+      string getValue() {
          return value;
       }
 
       Constant() = default;
 
-      Constant(string _name, string _value) {
-         name = _name;
-         value = atoi(_value.c_str());
-      }
-
-      Constant(string _name, int _value) {
-         name = _name;
+      Constant(string _value) {
          value = _value;
       }
 
-      Constant(string _name) {
-         name = _name;
-         value = INT_MIN;
-      }
-
       bool operator < (Constant& b) const {
-         return name < b.getName();
+         return value < b.getValue();
       }
 
       bool operator > (Constant& b) const {
-         return name > b.getName();
+         return value > b.getValue();
       }
 
       bool operator == (Constant b) {
-         return name == b.getName() && value == b.getValue();
+         return value == b.getValue();
       }
 
    private:
-      string name;
-      int value;
+      string value;
 };
 
 class Int {
