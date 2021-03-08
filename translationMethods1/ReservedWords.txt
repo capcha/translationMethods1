@@ -1,3 +1,5 @@
-2
-name1
-name2
+4
+main
+void
+int
+if

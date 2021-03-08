@@ -148,7 +148,7 @@ struct Constant {
    }
 
    bool operator == (Constant b) {
-      return name == b.name;
+      return name == b.name && value == b.value;
    }
 };
 
@@ -180,7 +180,7 @@ struct Int {
    }
 
    bool operator == (Int b) {
-      return name == b.name;
+      return name == b.name && value == b.value;
    }
 };
 
@@ -314,18 +314,62 @@ int main()
 {
    //ImmutableTable<Operator> operatorTable = ImmutableTable<Operator>("Operators.txt");
    //ImmutableTable<AlphabetUnit> alphabetTable = ImmutableTable<AlphabetUnit>("AlphabetUnit.txt");
-   ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separators.txt");
-   ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWords.txt");
+   //ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separators.txt");
+
+   //ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWords.txt");
+   //ReservedWord w;
+   //cout << (wordsTable.isExist(w) ? "true" : "false");
+   //cout << endl;
+   //w = ReservedWord("fasfd");
+   //cout << (wordsTable.isExist(w) ? "true" : "false");
+
+
+   /*ReservedWord w;
+   int id = 2;
+   if (wordsTable.getElementById(id, w)) cout << id << " " << w.name;
+   id = 5;
+   if (wordsTable.getElementById(id, w)) cout << id << " " << w.name;
+   return 0;*/
+
+   /*ReservedWord w = ReservedWord("void");
+   int id;
+   if (wordsTable.getIdByElement(w, id)) cout << w.name << " " << id;
+   w = ReservedWord("voidsad");
+   if (wordsTable.getIdByElement(w, id)) cout << w.name << " " << id;*/
+
+
    //MutableTable<Int> intTable = MutableTable<Int>("Int.txt");
    MutableTable<Constant> constTable = MutableTable<Constant>("Constant.txt");
 
-   string name = "asdasdas";
-   Constant c = Constant(name, "4");
-   Constant b = Constant(name, 4);
+   Constant c = Constant("c", 777);
    constTable.addElement(c);
-   constTable.addElement(b);
-   constTable.getElementById(1, c);
-   int A;
-   constTable.getIdByElement(c, A);
+
+   //int id = 4;
+   //if (constTable.getElementById(id, c)) cout << id << " " << c.name;
+   //id = 777;
+   //if (constTable.getElementById(id, c)) cout << id << " " << c.name;
+
+   //c = Constant("c", 777);
+   //int id;
+   //if (constTable.getIdByElement(c, id)) cout << c.name << " " << id;
+   //c = Constant("c", 43);
+   //if (constTable.getIdByElement(c, id)) cout << c.name << " " << id;
+
+   c = Constant("name1", 1);
+   if (constTable.isExist(c)) cout << "true" << endl;
+   else cout << "false";
+   c = Constant("vasdas", 2);
+   if (constTable.isExist(c)) cout << "true";
+   else cout << "false";
+
+   return 0;
+   //string name = "asdasdas";
+   //Constant c = Constant(name, "4");
+   //Constant b = Constant(name, 4);
+   //constTable.addElement(c);
+   //constTable.addElement(b);
+   //constTable.getElementById(1, c);
+   //int A;
+   //constTable.getIdByElement(c, A);
    
 }
