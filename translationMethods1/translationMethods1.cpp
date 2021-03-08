@@ -513,7 +513,7 @@ class Translator {
                      constants.addElement(constant);
                      int tableId, chain;
                      constants.getIdByElement(newConst, tableId);
-                     fOutToken << 6 << '\t'  << tableId << '\t' << newConst.getValue() << '\t' << endl;
+                     fOutToken << 6 << '\t'  << tableId << '\t' << 0 << '\t' << endl;
                   }
 
                   return analyzeString(str);
@@ -709,4 +709,5 @@ int main()
 {
    Translator t;
    t.scanFile("Source.txt", "token.txt", "errorFile.txt");
+   return 0;
 }
