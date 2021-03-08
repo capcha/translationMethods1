@@ -414,25 +414,25 @@ class Translator {
             stringStream << symbol1;
 
             str2 = stringStream.str();
-            int symbol_type = -1;
+            int symbolType = -1;
 
             if (alphabet.isExist(symbol0)) {
-               symbol_type = 0;
+               symbolType = 0;
             }
 
             if (isdigit(symbol0) || symbol0 == '-') {
-               symbol_type = 1;
+               symbolType = 1;
             }
 
             if (operators.isExist(str1) || operators.isExist(str2)) {
-               symbol_type = 2;
+               symbolType = 2;
             }
 
             if (separators.isExist(symbol0)) {
-               symbol_type = 3;
+               symbolType = 3;
             }
 
-            switch (symbol_type) {
+            switch (symbolType) {
                case 0: {
                   string name = str;
                   int i;
