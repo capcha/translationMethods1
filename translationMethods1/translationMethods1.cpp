@@ -368,7 +368,7 @@ template<typename T> class MutableTable {
          return false;
       }
 
-      bool getIdByElement(string name, int value, int& result) {
+      bool getIdByElement(string name, int& result, int& value) {
 
          T element = T(name, value);
 
@@ -391,12 +391,12 @@ template<typename T> class MutableTable {
 
 class Translator {
    private:
-      ImmutableTable<AlphabetUnit> alphabet; 
-      ImmutableTable<Operator> operators; 
-      ImmutableTable<ReservedWord> words; 
-      ImmutableTable<Separator> separators; 
-      MutableTable<Int> integers;
-      MutableTable<Constant> constants;
+      ImmutableTable<AlphabetUnit> alphabet; //  
+      ImmutableTable<Operator> operators;    // 2
+      ImmutableTable<ReservedWord> words;    // 3
+      ImmutableTable<Separator> separators;  // 4
+      MutableTable<Int> integers;            // 5
+      MutableTable<Constant> constants;      // 6
 
       ifstream fIn;
       ofstream fOutToken, fOutError;
@@ -648,18 +648,18 @@ class Translator {
       {
          int notwhite = out_.find_first_not_of(" \t\n");
          out_.erase(0, notwhite);
-         int notwhite = out_.find_last_not_of(" \t\n");
+         notwhite = out_.find_last_not_of(" \t\n");
          out_.erase(notwhite + 1);
       }
 
    public:
       Translator() {
-         alphabet = ImmutableTable<AlphabetUnit>("files/table_letters.txt");
-         operators = ImmutableTable<Operator>("files/table_letters.txt");
-         words = ImmutableTable<ReservedWord>("files/table_letters.txt");
-         separators = ImmutableTable<Separator>("files/table_letters.txt");
-         integers = MutableTable<Int>("files/table_letters.txt");
-         constants = MutableTable<Constant>("files/table_letters.txt");
+         alphabet = ImmutableTable<AlphabetUnit>("Alphabet.txt");
+         operators = ImmutableTable<Operator>("Operators.txt");
+         words = ImmutableTable<ReservedWord>("ReservedWords.txt");
+         separators = ImmutableTable<Separator>("Separators.txt");
+         integers = MutableTable<Int>();
+         constants = MutableTable<Constant>();
       }
 
       bool scanFile(string sourceFile, string tokenFile, string errorFile) {
@@ -704,66 +704,6 @@ class Translator {
 
 int main()
 {
-   //ImmutableTable<Operator> operatorTable = ImmutableTable<Operator>("Operators.txt");
-   //ImmutableTable<AlphabetUnit> alphabetTable = ImmutableTable<AlphabetUnit>("AlphabetUnit.txt");
-   //ImmutableTable<Separator> separatorTable = ImmutableTable<Separator>("Separators.txt");
-
-   //ImmutableTable<ReservedWord> wordsTable = ImmutableTable<ReservedWord>("ReservedWords.txt");
-   //ReservedWord w;
-   //cout << (wordsTable.isExist(w) ? "true" : "false");
-   //cout << endl;
-   //w = ReservedWord("fasfd");
-   //cout << (wordsTable.isExist(w) ? "true" : "false");
-
-
-   /*ReservedWord w;
-   int id = 2;
-   if (wordsTable.getElementById(id, w)) cout << id << " " << w.name;
-   id = 5;
-   if (wordsTable.getElementById(id, w)) cout << id << " " << w.name;
-   return 0;*/
-
-   /*ReservedWord w = ReservedWord("void");
-   int id;
-   if (wordsTable.getIdByElement(w, id)) cout << w.name << " " << id;
-   w = ReservedWord("voidsad");
-   if (wordsTable.getIdByElement(w, id)) cout << w.name << " " << id;*/
-
-
-   //MutableTable<Int> intTable = MutableTable<Int>("Int.txt");
-   MutableTable<Constant> constTable = MutableTable<Constant>("Constant.txt");
-
-   Constant c = Constant("c", 777);
-   constTable.addElement(c);
-
-   //int id = 4;
-   //if (constTable.getElementById(id, c)) cout << id << " " << c.name;
-   //id = 777;
-   //if (constTable.getElementById(id, c)) cout << id << " " << c.name;
-
-   //c = Constant("c", 777);
-   //int id;
-   //if (constTable.getIdByElement(c, id)) cout << c.name << " " << id;
-   //c = Constant("c", 43);
-   //if (constTable.getIdByElement(c, id)) cout << c.name << " " << id;
-
-   c = Constant("name1", 1);
-   if (constTable.isExist(c)) cout << "true" << endl;
-   else cout << "false";
-   c = Constant("vasdas", 2);
-   if (constTable.isExist(c)) cout << "true";
-   else cout << "false";
-
-   ReservedWord wew = ReservedWord('c');
-
-   return 0;
-   //string name = "asdasdas";
-   //Constant c = Constant(name, "4");
-   //Constant b = Constant(name, 4);
-   //constTable.addElement(c);
-   //constTable.addElement(b);
-   //constTable.getElementById(1, c);
-   //int A;
-   //constTable.getIdByElement(c, A);
-   
+   Translator t;
+   t.scanFile("Source.txt", "token.txt", "errorFile.txt");
 }
