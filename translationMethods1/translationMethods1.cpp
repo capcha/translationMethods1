@@ -353,7 +353,7 @@ template<typename T> class MutableTable {
          return false;
       }
 
-      bool getIdByElement(T element, int& result) {
+      bool getIdByElement(Int element, int& result) {
 
          if (isExist(element)) {
             for (int i = 0; i < data.size(); i++) {
@@ -368,9 +368,24 @@ template<typename T> class MutableTable {
          return false;
       }
 
-      bool getIdByElement(string name, int& result, int& value) {
+      bool getIdByElement(Constant element, int& result) {
 
-         T element = T(name, value);
+         if (isExist(element)) {
+            for (int i = 0; i < data.size(); i++) {
+               if (data[i] == element) {
+                  result = i;
+                  break;
+               }
+            }
+            return true;
+         }
+
+         return false;
+      }
+
+      bool getIdByElement(string name, int& result) {
+
+         T element = T(name);
 
          if (isExist(element)) {
             for (int i = 0; i < data.size(); i++) {
@@ -459,10 +474,11 @@ class Translator {
                      }
                   }
                   else {
-                     integers.addElement(name);
-                     int tableId, chain;
-                     integers.getIdByElement(name, tableId, chain);
-                     fOutToken << 5 << '\t' << tableId << '\t' << chain << endl;
+                     Int newInt = Int(name);
+                     integers.addElement(newInt);
+                     int tableId;
+                     integers.getIdByElement(newInt, tableId);
+                     fOutToken << 5 << '\t' << tableId << '\t' << newInt.getIsInit() << endl;
                   }
 
                   return analyzeString(str);
@@ -507,10 +523,11 @@ class Translator {
                      return false;
                   }
                   else {
+                     Constant newConst = Constant(constant);
                      constants.addElement(constant);
                      int tableId, chain;
-                     integers.getIdByElement(constant, tableId, chain);
-                     fOutToken << 6 << '\t'  << tableId << '\t' << chain << '\t' << endl;
+                     integers.getIdByElement(newConst, tableId);
+                     fOutToken << 6 << '\t'  << tableId << '\t' << newConst.getValue() << '\t' << endl;
                   }
 
                   return analyzeString(str);
