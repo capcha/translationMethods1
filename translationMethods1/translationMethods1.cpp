@@ -306,6 +306,9 @@ template<typename T> class MutableTable {
       }
 
       bool addElement(T element) {
+         if (isExist(element)) {
+              return false;
+         }
          try
          {
             data.push_back(element);
@@ -487,7 +490,7 @@ class Translator {
                   trim(constant);
                   trim(str);
 
-                  if (constant.find_last_of('.') - constant.find_first_of('.') != 0) {
+                  if (constant.find_last_of('.') != string::npos) {
                      fOutError << "Error: incorrect constant" << endl;
                      cout << "Error: incorrect constant" << endl;
                      return false;
@@ -509,7 +512,7 @@ class Translator {
 
                   if (operators.isExist(str2)) {
                      operators.getIdByElement(str2, tableId);
-                     fOutToken << 4 << '\t' << tableId << '\t' << -1 << endl;
+                     fOutToken << 2 << '\t' << tableId << '\t' << -1 << endl;
                      str.erase(0, 2);
                      trim(str);
                      return analyzeString(str);
@@ -517,7 +520,7 @@ class Translator {
 
                   if (operators.isExist(str1)) {
                      operators.getIdByElement(str1, tableId);
-                     fOutToken << 4 << '\t' << tableId << '\t' << -1 << endl;
+                     fOutToken << 2 << '\t' << tableId << '\t' << -1 << endl;
                      str.erase(0, 1);
                      trim(str);
                      return analyzeString(str);

@@ -32,5 +32,6 @@
     <Text Include="Source.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
+    <Text Include="Operators.txt" />
   </ItemGroup>
 </Project>
