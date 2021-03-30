@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iterator>
 #include <sstream>
+#include <stack>
 
 using namespace std;
 
@@ -200,6 +201,34 @@ class Int {
       bool isInit;
 };
 
+class Token {
+   public: 
+      int getTableId() {
+         return tableId;
+      }
+
+      int getRowNumber() {
+         return rowNumber;
+      }
+
+      int getChainNumber() {
+         return chainNumber;
+      }
+
+      Token() = default;
+
+      Token(int _tableId, int _rowNumber, int _chainNumber) {
+         tableId = _tableId;
+         rowNumber = _rowNumber;
+         chainNumber = _chainNumber;
+      }
+      
+   private:
+      int tableId;
+      int rowNumber;
+      int chainNumber; 
+};
+
 template<typename T> class ImmutableTable {
 
    public:
@@ -379,14 +408,14 @@ template<typename T> class MutableTable {
 
 class Translator {
    private:
-      ImmutableTable<AlphabetUnit> alphabet; //  
+      ImmutableTable<AlphabetUnit> alphabet; // 1
       ImmutableTable<Operator> operators;    // 2
       ImmutableTable<ReservedWord> words;    // 3
       ImmutableTable<Separator> separators;  // 4
       MutableTable<Int> integers;            // 5
       MutableTable<Constant> constants;      // 6
 
-      ifstream fIn;
+      ifstream fIn, fInToken;
       ofstream fOutToken, fOutError;
 
       bool analyzeString(string str) {
@@ -498,7 +527,7 @@ class Translator {
                   else {
                      Constant newConst = Constant(constant);
                      constants.addElement(constant);
-                     int tableId, chain;
+                     int tableId;
                      constants.getIdByElement(newConst, tableId);
                      fOutToken << 6 << '\t'  << tableId << '\t' << 0 << '\t' << endl;
                   }
@@ -642,6 +671,39 @@ class Translator {
          out_.erase(notwhite + 1);
       }
 
+      string getValue(Token& token) {
+         switch (token.getTableId())
+         {
+         case 2: {
+            Operator oper;
+            operators.getElementById(token.getRowNumber(), oper);
+            return string(1, oper.getName());
+         }
+         case 3: {
+            ReservedWord reservedWord;
+            words.getElementById(token.getRowNumber(), reservedWord);
+            return reservedWord.getName();
+         }
+         case 4: {
+            Separator separator;
+            separators.getElementById(token.getRowNumber(), separator);
+            return string(1, separator.getName());
+         }
+         case 5: {
+            Int integer;
+            integers.getElementById(token.getRowNumber(), integer);
+            return integer.getName();
+         }
+         case 6: {
+            Constant constant;
+            constants.getElementById(token.getRowNumber(), constant);
+            return constant.getValue();
+         }
+         default:
+            return NULL;
+         }
+      }
+
    public:
       Translator() {
          alphabet = ImmutableTable<AlphabetUnit>("Alphabet.txt");
@@ -652,7 +714,7 @@ class Translator {
          constants = MutableTable<Constant>();
       }
 
-      bool scanFile(string sourceFile, string tokenFile, string errorFile) {
+      bool lexicalAnalysis(string sourceFile, string tokenFile, string errorFile) {
          bool isErrorFound = false;
          string str;
 
@@ -688,13 +750,20 @@ class Translator {
          fOutError.close();
          return !isErrorFound;
       }
+   
+      bool syntaxAnalysis(string tokenFile, string errorFile) {
+         bool isErrorFound = false;
+         string str;
+
+         fInToken.open(tokenFile.c_str(), ios::in);
+         fOutError.open(errorFile.c_str(), ios::out);
+
+      }
 };
-
-
 
 int main()
 {
    Translator t;
-   t.scanFile("Source.txt", "token.txt", "errorFile.txt");
+   t.lexicalAnalysis("Source.txt", "Token.txt", "errorFile.txt");
    return 0;
 }

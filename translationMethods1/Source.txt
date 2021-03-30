@@ -1,6 +1,12 @@
 int main() {
 	int a;
 	a = 5;
-	b = 4.0;
+
+	if (c == 3) {
+		b = 3;
+	}
+
+	b = 4f0;
+
 	return 1 + 5;
 }

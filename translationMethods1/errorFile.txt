@@ -1,2 +1,0 @@
-Error: incorrect constant
-Error in string 4: 	b = 4.0;
