@@ -229,6 +229,62 @@ class Token {
       int chainNumber; 
 };
 
+class StateTableRow {
+   public:
+      vector<string> getTerminal() {
+         return terminal;
+      }
+
+      int getJump() {
+         return jump;
+      }
+
+      bool getAccept() {
+         return accept;
+      }
+
+      bool getStack() {
+         return stack;
+      }
+
+      bool getReturnState() {
+         return returnState;
+      }
+
+      bool getError() {
+         return error;
+      }
+
+      void setJump(int _jump) {
+         jump = _jump;
+      }
+
+      void setAccept(int acc) {
+         accept = acc;
+      }
+
+      void setStack(int _stack) {
+         stack = _stack;
+      }
+
+      void setReturn(int ret) {
+         returnState = ret;
+      }
+
+      void setError(int err) {
+         error = err;
+      }
+
+   private:
+      vector<string> terminal;
+      int jump;
+      bool accept;
+      bool stack;
+      bool returnState;
+      bool error;
+
+};
+
 template<typename T> class ImmutableTable {
 
    public:
@@ -417,6 +473,9 @@ class Translator {
 
       ifstream fIn, fInToken;
       ofstream fOutToken, fOutError;
+
+      vector<StateTableRow> StateTable; //таблица разбора
+      stack<int> ParseStack; //стек, используемый для разбора
 
       bool analyzeString(string str) {
          trim(str);
@@ -712,6 +771,32 @@ class Translator {
          separators = ImmutableTable<Separator>("Separators.txt");
          integers = MutableTable<Int>();
          constants = MutableTable<Constant>();
+
+         ifstream fInStateTable("StateTable.txt");
+
+         while (!fInStateTable.eof()) {
+            StateTableRow stateTableRow; //добавляемый эллемент
+            string inputString;
+
+            fInStateTable >> inputString;
+
+            while (inputString != "|") {
+               stateTableRow.getTerminal().push_back(inputString);
+               fInStateTable >> inputString;
+            };
+
+            int jump, accept, returnState, stack, error; 
+
+            fInStateTable >> jump >> accept >> stack >> returnState >> error;
+
+            stateTableRow.setJump(jump);
+            stateTableRow.setAccept(accept);
+            stateTableRow.setStack(stack);
+            stateTableRow.setReturn(returnState);
+            stateTableRow.setError(error);
+               
+            StateTable.push_back(stateTableRow);
+         };
       }
 
       bool lexicalAnalysis(string sourceFile, string tokenFile, string errorFile) {
@@ -757,6 +842,139 @@ class Translator {
 
          fInToken.open(tokenFile.c_str(), ios::in);
          fOutError.open(errorFile.c_str(), ios::out);
+
+         Token currentToken, nextToken;
+         
+         int tableId, rowId, chainId;
+
+         fInToken >> tableId;
+         fInToken >> rowId;
+         fInToken >> chainId;
+
+         currentToken = Token(tableId, rowId, chainId);
+         
+         int currentRow = 0, prevRow;         
+   
+         bool localError = false, isTreeBuildStarted = false;
+
+         vector<Token> treeVector;
+         string prevTokenValue;
+
+         int identNumber;
+
+         while (!fInToken.eof() && !localError) {
+            string tokenValue = getValue(currentToken);
+   
+            string token_str = getValue(currentToken); // какой текст содержится в токене
+            if (currentToken.getTableId() == 5 || currentToken.getTableId() == 6) {
+               token_str = "ID";
+            }
+
+            if (token_str == "ID") {
+               isTreeBuildStarted = true;
+            }
+
+            bool isTerminalLegal = false; //допустим ли данный терминал
+
+            for (int i = 0; i < StateTable[currentRow].getTerminal().size() & !isTerminalLegal; i++) {
+               if (StateTable[currentRow].getTerminal()[i] == token_str)
+                  isTerminalLegal = true;
+            }
+
+            if (isTerminalLegal) { //если получаем то, что ожидали то обрабатываем это
+
+               bool change_row = false; //сменили ли мы строку
+
+               if (StateTable[currentRow].getStack()) {
+                  ParseStack.push(currentRow + 1); //если надо получить в стек - ложим
+               }
+
+               if (StateTable[currentRow].getAccept()) { //принимаем терминал и если надо - расширяем дерево
+
+                  if (little_tree_bg) {
+                     little_tree_code.push_back(currentToken);
+                  }
+
+                  if (token_str == ";" || token_str == ",") { //если закончили разбор цельного оператора
+                     grow_tree(little_tree_code); //добавили всё что нужно в дерево
+
+                     //и перешли в исходное состояние
+                     little_tree_code.clear();
+                     little_tree_bg = false;
+
+                  }
+
+                  //все, обнуляем типа больше нет
+                  if (token_str == ";") {
+                     have_type = false;
+                  }
+
+                  //Если мы нашли тип, то мы его запоминаем
+                  if (token_str == "int" || token_str == "char") {
+                     have_type = true;
+                     if (token_str == "int")
+                        type_type = 1;
+                     if (token_str == "char")
+                        type_type = 2;
+                  }
+
+
+                  //Заносим тип в таблицу идентицикаторов
+                  if (token_str == "ID" && have_type && currentRow == 47) {
+                     identifier.set_ind_type(getValue(currentToken), type_type);
+                  }
+
+                  //Если вдруг попытались присвоить что-то константе
+                  if (currentRow == 30 && currentToken.table_n != 5) {
+                     parse_error_f << "Ошибка в обработке " << getValue(currentToken) << " константе не может быть присовенно значение" << endl;
+                     cout << "Lex error" << endl;
+                     localError = true;
+                  }
+
+
+                  //и пошли дальше
+                  currentToken = nextToken;
+                  if (!parse_token_f.eof())
+                     parse_token_f >> nextToken; //если принимает, то считываем новый
+               }
+
+               if (StateTable[currentRow].should_return) {
+                  prev_row = currentRow; //запоминаем предыдущий
+                  currentRow = ParseStack.top(); //если надо взять из стека - берём
+                  ParseStack.pop();
+                  change_row = true;
+               }
+
+
+               if (!change_row && StateTable[currentRow].jump != -1) {
+                  currentRow = StateTable[currentRow].jump; //если надо прыгнуть - прыгаем
+               }
+
+            }
+            else { //если произошщло несоответсвие
+               if (StateTable[currentRow].error) { //если можем судить что уже ошибка, то возвращаем её
+                  localError = true;
+                  parse_error_f << "Ошибка в обработке " << getValue(currentToken) << endl;
+                  cout << "Lex error" << endl;
+
+                  //Для РГЗ 1, начало - вывод альтернатив
+                  parse_error_f << "Возможно на этом месте должно быть: ";
+                  do {
+                     for (int i = 0; i < StateTable[currentRow].termenal.size(); i++) {
+                        parse_error_f << StateTable[currentRow].termenal[i] << " ";
+                     }
+                     currentRow--;
+                  } while (!StateTable[currentRow].error);
+                  parse_error_f << endl;
+                  //Для РГЗ 1 - конец
+               }
+               else { //Если нет - переходим на следующий
+                  currentRow++;
+               }
+            }
+            token_str_prev = token_str;
+      
+         }
 
       }
 };

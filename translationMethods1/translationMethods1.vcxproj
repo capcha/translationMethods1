@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="StateTable.txt" />
     <ClCompile Include="translationMethods1.cpp" />
   </ItemGroup>
   <ItemGroup>

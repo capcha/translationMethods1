@@ -18,6 +18,9 @@
     <ClCompile Include="translationMethods1.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="StateTable.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReservedWords.txt">
@@ -33,5 +36,8 @@
       <Filter>Файлы ресурсов</Filter>
     </Text>
     <Text Include="Operators.txt" />
+    <Text Include="Alphabet.txt" />
+    <Text Include="errorFile.txt" />
+    <Text Include="token.txt" />
   </ItemGroup>
 </Project>
