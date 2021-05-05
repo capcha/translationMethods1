@@ -477,6 +477,25 @@ class Translator {
       vector<StateTableRow> StateTable; //таблица разбора
       stack<int> ParseStack; //стек, используемый для разбора
 
+      struct TreeElement {
+
+         TreeElement() {	//конструктор по умолчанию
+            left = 0;
+            right = 0;
+         }
+
+         int type; //Тип элемент
+                  //0 - знак операции(или присваивания)
+                  //1 - переменная
+
+         string id; //хранится идентификаторв, в виде строки
+
+         TreeElement* left, * right; //правое и левое поддерева
+      };
+
+      TreeElement *treeRoot; //корень дерева
+      TreeElement *currentNode; //Указатель на текущий эллемент дерева
+
       bool analyzeString(string str) {
          trim(str);
          bool isErrorFound = false;
@@ -720,6 +739,117 @@ class Translator {
          return true;
       }
 
+      void buildTree(vector<Token> code) {
+
+         TreeElement* little_tree_beg = new TreeElement;
+
+         if (code.size() > 2) {
+            buildSubTree(code, little_tree_beg);
+
+            if (treeRoot == 0) {
+               treeRoot = little_tree_beg;
+               currentNode = treeRoot;
+            }
+            else {
+               currentNode->right = little_tree_beg; 
+            }
+
+            while (currentNode->right != 0) { 
+               currentNode = currentNode->right;
+            };
+
+         }
+      }
+
+      void buildSubTree(vector<Token> code, TreeElement*& beg) {
+
+         vector<Token> L, R; //левое и правое поддеревья
+
+         int bracket_num = 0; //количество скобок
+         int L_num = 0;
+
+         bool flag = false;
+
+
+         //Если последний токен
+         if (code.size() == 1 && (getValue(code[0]) == ";" || getValue(code[0]) == ",")) {
+            beg->id = ";";
+            beg->type = 2;
+         }
+         else {
+
+            vector<int> opers_n; //номера "верхних операций"
+
+            //Находим все "верхние операции"
+            for (int i = 0; i < code.size(); i++) {
+               if (getValue(code[i]) == "(") bracket_num++;
+               if (getValue(code[i]) == ")") bracket_num--;
+               if (code[i].getTableId() == 2 && bracket_num == 0) opers_n.push_back(i);
+            }
+
+            if (opers_n.size() == 0) { //ели операций нет пропуска всё связанное с ними
+               flag = false;
+            }
+            else { //если есть - ищим операцию с наименьшим приоритетом
+               int low_num = -1; //номер нужной нам операции
+               //Сначало проверка на наличие равенства
+               for (int j = 0; j < opers_n.size() && low_num == -1; j++)
+                  if (getValue(code[opers_n[j]]) == "=" || getValue(code[opers_n[j]]) == "+=" || getValue(code[opers_n[j]]) == "-=" || getValue(code[opers_n[j]]) == "*=")
+                     low_num = opers_n[j];
+               //Потом на + и -
+               for (int j = opers_n.size() - 1; j >= 0 && low_num == -1; j--) {
+                  if (getValue(code[opers_n[j]]) == "+" || getValue(code[opers_n[j]]) == "-") {
+                     low_num = opers_n[j]; //нашли нашу операцию
+                  }
+               }
+
+               //Если не нашли выбираем последнюю операцию
+               if (low_num == -1)
+                  low_num = opers_n[opers_n.size() - 1];
+
+               //Привет интегрулятору
+
+               if (getValue(code[0]) == "(") L_num++;
+
+               //Формируем левое поддерево
+               for (int j = 0; L_num < low_num; L_num++, j++)
+                  L.push_back(code[L_num]);
+
+               //Формируем правое поддерево
+               int R_num = 0;
+               int l;
+               if (getValue(code[low_num + 1]) == "(") R_num++;
+               for (l = 0, R_num = low_num + 1 + R_num; R_num < code.size(); R_num++, l++)
+                  R.push_back(code[R_num]);
+
+               beg->left = new TreeElement;
+               beg->right = new TreeElement;
+
+               beg->id = getValue(code[low_num]);
+               beg->type = 0;
+
+               buildSubTree(L, beg->left);
+               buildSubTree(R, beg->right);
+               flag = true;
+            }
+
+            if (!flag) {
+               int k = 0;
+               while (getValue(code[k]) == "(") k++;
+               beg->id = getValue(code[k]);
+               beg->type = 1;
+
+               if (code.size() > k + 1) {
+                  beg->right = new TreeElement;
+                  beg->right->id = ";";
+                  beg->right->type = 2;
+               }
+
+            }
+         }
+
+      }
+
       int stringNumber, stringIncement;
 
       static inline void trim(string& out_)
@@ -730,32 +860,32 @@ class Translator {
          out_.erase(notwhite + 1);
       }
 
-      string getValue(Token& token) {
-         switch (token.getTableId())
+      string getValue(Token& Token) {
+         switch (Token.getTableId())
          {
          case 2: {
             Operator oper;
-            operators.getElementById(token.getRowNumber(), oper);
+            operators.getElementById(Token.getRowNumber(), oper);
             return string(1, oper.getName());
          }
          case 3: {
             ReservedWord reservedWord;
-            words.getElementById(token.getRowNumber(), reservedWord);
+            words.getElementById(Token.getRowNumber(), reservedWord);
             return reservedWord.getName();
          }
          case 4: {
             Separator separator;
-            separators.getElementById(token.getRowNumber(), separator);
+            separators.getElementById(Token.getRowNumber(), separator);
             return string(1, separator.getName());
          }
          case 5: {
             Int integer;
-            integers.getElementById(token.getRowNumber(), integer);
+            integers.getElementById(Token.getRowNumber(), integer);
             return integer.getName();
          }
          case 6: {
             Constant constant;
-            constants.getElementById(token.getRowNumber(), constant);
+            constants.getElementById(Token.getRowNumber(), constant);
             return constant.getValue();
          }
          default:
@@ -853,14 +983,15 @@ class Translator {
 
          currentToken = Token(tableId, rowId, chainId);
          
-         int currentRow = 0, prevRow;         
+         int currentRow = 0, prevRow;      
+         bool isInt = false;
    
          bool localError = false, isTreeBuildStarted = false;
 
          vector<Token> treeVector;
          string prevTokenValue;
 
-         int identNumber;
+         int identNumber, type;
 
          while (!fInToken.eof() && !localError) {
             string tokenValue = getValue(currentToken);
@@ -877,8 +1008,9 @@ class Translator {
             bool isTerminalLegal = false; //допустим ли данный терминал
 
             for (int i = 0; i < StateTable[currentRow].getTerminal().size() & !isTerminalLegal; i++) {
-               if (StateTable[currentRow].getTerminal()[i] == token_str)
+               if (StateTable[currentRow].getTerminal()[i] == token_str) {
                   isTerminalLegal = true;
+               }
             }
 
             if (isTerminalLegal) { //если получаем то, что ожидали то обрабатываем это
@@ -891,42 +1023,32 @@ class Translator {
 
                if (StateTable[currentRow].getAccept()) { //принимаем терминал и если надо - расширяем дерево
 
-                  if (little_tree_bg) {
-                     little_tree_code.push_back(currentToken);
+                  if (isTreeBuildStarted) {
+                     treeVector.push_back(currentToken);
                   }
 
                   if (token_str == ";" || token_str == ",") { //если закончили разбор цельного оператора
-                     grow_tree(little_tree_code); //добавили всё что нужно в дерево
+                     buildTree(treeVector); //добавили всё что нужно в дерево
 
                      //и перешли в исходное состояние
-                     little_tree_code.clear();
-                     little_tree_bg = false;
+                     treeVector.clear();
+                     isTreeBuildStarted = false;
 
                   }
 
                   //все, обнуляем типа больше нет
                   if (token_str == ";") {
-                     have_type = false;
+                     isInt = false;
                   }
 
                   //Если мы нашли тип, то мы его запоминаем
-                  if (token_str == "int" || token_str == "char") {
-                     have_type = true;
-                     if (token_str == "int")
-                        type_type = 1;
-                     if (token_str == "char")
-                        type_type = 2;
-                  }
-
-
-                  //Заносим тип в таблицу идентицикаторов
-                  if (token_str == "ID" && have_type && currentRow == 47) {
-                     identifier.set_ind_type(getValue(currentToken), type_type);
+                  if (token_str == "int") {
+                     isInt = true;
                   }
 
                   //Если вдруг попытались присвоить что-то константе
-                  if (currentRow == 30 && currentToken.table_n != 5) {
-                     parse_error_f << "Ошибка в обработке " << getValue(currentToken) << " константе не может быть присовенно значение" << endl;
+                  if (currentRow == 30 && currentToken.getTableId() != 5) {
+                     fOutError << "Ошибка в обработке " << getValue(currentToken) << " константе не может быть присовенно значение" << endl;
                      cout << "Lex error" << endl;
                      localError = true;
                   }
@@ -934,45 +1056,49 @@ class Translator {
 
                   //и пошли дальше
                   currentToken = nextToken;
-                  if (!parse_token_f.eof())
-                     parse_token_f >> nextToken; //если принимает, то считываем новый
+                  if (!fInToken.eof()) {
+                     fInToken >> tableId;
+                     fInToken >> rowId;
+                     fInToken >> chainId;
+                     nextToken = Token(tableId, rowId, chainId);
+                  }
                }
 
-               if (StateTable[currentRow].should_return) {
-                  prev_row = currentRow; //запоминаем предыдущий
+               if (StateTable[currentRow].getReturnState()) {
+                  prevRow = currentRow; //запоминаем предыдущий
                   currentRow = ParseStack.top(); //если надо взять из стека - берём
                   ParseStack.pop();
                   change_row = true;
                }
 
 
-               if (!change_row && StateTable[currentRow].jump != -1) {
-                  currentRow = StateTable[currentRow].jump; //если надо прыгнуть - прыгаем
+               if (!change_row && StateTable[currentRow].getJump() != 0) {
+                  currentRow = StateTable[currentRow].getJump(); //если надо прыгнуть - прыгаем
                }
 
             }
             else { //если произошщло несоответсвие
-               if (StateTable[currentRow].error) { //если можем судить что уже ошибка, то возвращаем её
+               if (StateTable[currentRow].getError()) { //если можем судить что уже ошибка, то возвращаем её
                   localError = true;
-                  parse_error_f << "Ошибка в обработке " << getValue(currentToken) << endl;
+                  fOutError << "Ошибка в обработке " << getValue(currentToken) << endl;
                   cout << "Lex error" << endl;
 
                   //Для РГЗ 1, начало - вывод альтернатив
-                  parse_error_f << "Возможно на этом месте должно быть: ";
+                  fOutError << "Возможно на этом месте должно быть: ";
                   do {
-                     for (int i = 0; i < StateTable[currentRow].termenal.size(); i++) {
-                        parse_error_f << StateTable[currentRow].termenal[i] << " ";
+                     for (int i = 0; i < StateTable[currentRow].getTerminal().size(); i++) {
+                        fOutError << StateTable[currentRow].getTerminal()[i] << " ";
                      }
                      currentRow--;
-                  } while (!StateTable[currentRow].error);
-                  parse_error_f << endl;
+                  } while (!StateTable[currentRow].getError());
+                  fOutError << endl;
                   //Для РГЗ 1 - конец
                }
                else { //Если нет - переходим на следующий
                   currentRow++;
                }
             }
-            token_str_prev = token_str;
+            prevTokenValue = token_str;
       
          }
 
