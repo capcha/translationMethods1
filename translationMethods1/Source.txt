@@ -1,5 +1,3 @@
-int main() {
-	int a = 3 + 4, c = 1 + a;
-
-	return a;
+void main() {
+	return 0;
 }

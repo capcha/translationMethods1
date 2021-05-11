@@ -1,5 +1,5 @@
-﻿#include <iostream>
-#include <vector>
+﻿#include <vector>
+#include <iostream>
 #include <string>
 #include <fstream>
 #include <iterator>
@@ -1018,9 +1018,7 @@ class Translator {
             }
 
             if (isTerminalLegal) { //если получаем то, что ожидали то обрабатываем это
-               if (currentRow == 30) {
-                  cout << "da";
-               }
+               
                bool change_row = false; //сменили ли мы строку
 
                if (newTable[currentRow].getStack()) {
@@ -1039,7 +1037,6 @@ class Translator {
                      //и перешли в исходное состояние
                      treeVector.clear();
                      isTreeBuildStarted = false;
-
                   }
 
                   //все, обнуляем типа больше нет
@@ -1053,8 +1050,8 @@ class Translator {
                   }
 
                   //Если вдруг попытались присвоить что-то константе
-                  if (currentRow == 30 && nextToken.getTableId() != 5) {
-                     fOutError << "Ошибка в обработке " << currentRow << getValue(nextToken) << " константе не может быть присовенно значение" << endl;
+                  if (token_str == "=" && currentToken.getTableId() == 6) {
+                     fOutError << "Ошибка в обработке " << getValue(currentToken) << " константе не может быть присовенно значение" << endl;
                      cout << "Lex error" << endl;
                      localError = true;
                   }
