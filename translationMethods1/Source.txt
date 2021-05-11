@@ -1,12 +1,5 @@
 int main() {
-	int a;
-	a = 5;
+	int a = 3 + 4, c = 1 + a;
 
-	if (c == 3) {
-		b = 3;
-	}
-
-	b = 4f0;
-
-	return 1 + 5;
+	return a;
 }

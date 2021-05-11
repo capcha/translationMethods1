@@ -39,5 +39,8 @@
     <Text Include="Alphabet.txt" />
     <Text Include="errorFile.txt" />
     <Text Include="token.txt" />
+    <Text Include="newTable.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
   </ItemGroup>
 </Project>

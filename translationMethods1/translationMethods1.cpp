@@ -10,14 +10,13 @@ using namespace std;
 
 class Operator {
    public:
-      char getName() {
+      string getName() {
          return name;
       }
       
       Operator() = default;
 
-      Operator(char symbol) : name(symbol) {} 
-      Operator(string symbol) : name(symbol[0]) {}
+      Operator(string symbol) : name(symbol) {}
 
       bool operator < (Operator & b) const {
          return name < b.getName();
@@ -32,7 +31,7 @@ class Operator {
       }
 
    private: 
-      char name;
+      string name;
 };
 
 class AlphabetUnit {
@@ -275,6 +274,10 @@ class StateTableRow {
          error = err;
       }
 
+      void pushTerminal(string str) {
+         terminal.push_back(str);
+      }
+
    private:
       vector<string> terminal;
       int jump;
@@ -474,7 +477,7 @@ class Translator {
       ifstream fIn, fInToken;
       ofstream fOutToken, fOutError;
 
-      vector<StateTableRow> StateTable; //таблица разбора
+      vector<StateTableRow> newTable; //таблица разбора
       stack<int> ParseStack; //стек, используемый для разбора
 
       struct TreeElement {
@@ -866,7 +869,7 @@ class Translator {
          case 2: {
             Operator oper;
             operators.getElementById(Token.getRowNumber(), oper);
-            return string(1, oper.getName());
+            return oper.getName();
          }
          case 3: {
             ReservedWord reservedWord;
@@ -889,20 +892,20 @@ class Translator {
             return constant.getValue();
          }
          default:
-            return NULL;
+            return "";
          }
       }
 
    public:
       Translator() {
-         alphabet = ImmutableTable<AlphabetUnit>("Alphabet.txt");
-         operators = ImmutableTable<Operator>("Operators.txt");
-         words = ImmutableTable<ReservedWord>("ReservedWords.txt");
-         separators = ImmutableTable<Separator>("Separators.txt");
-         integers = MutableTable<Int>();
-         constants = MutableTable<Constant>();
+         alphabet = ImmutableTable<AlphabetUnit>("Alphabet.txt"); //1
+         operators = ImmutableTable<Operator>("Operators.txt");//2
+         words = ImmutableTable<ReservedWord>("ReservedWords.txt");//3
+         separators = ImmutableTable<Separator>("Separators.txt");//4
+         integers = MutableTable<Int>();//5
+         constants = MutableTable<Constant>();//6
 
-         ifstream fInStateTable("StateTable.txt");
+         ifstream fInStateTable("newTable.txt");
 
          while (!fInStateTable.eof()) {
             StateTableRow stateTableRow; //добавляемый эллемент
@@ -911,7 +914,7 @@ class Translator {
             fInStateTable >> inputString;
 
             while (inputString != "|") {
-               stateTableRow.getTerminal().push_back(inputString);
+               stateTableRow.pushTerminal(inputString);
                fInStateTable >> inputString;
             };
 
@@ -919,14 +922,15 @@ class Translator {
 
             fInStateTable >> jump >> accept >> stack >> returnState >> error;
 
-            stateTableRow.setJump(jump);
+            stateTableRow.setJump(jump - 1);
             stateTableRow.setAccept(accept);
             stateTableRow.setStack(stack);
             stateTableRow.setReturn(returnState);
             stateTableRow.setError(error);
                
-            StateTable.push_back(stateTableRow);
+            newTable.push_back(stateTableRow);
          };
+
       }
 
       bool lexicalAnalysis(string sourceFile, string tokenFile, string errorFile) {
@@ -981,7 +985,7 @@ class Translator {
          fInToken >> rowId;
          fInToken >> chainId;
 
-         currentToken = Token(tableId, rowId, chainId);
+         nextToken = Token(tableId, rowId, chainId);
          
          int currentRow = 0, prevRow;      
          bool isInt = false;
@@ -994,10 +998,10 @@ class Translator {
          int identNumber, type;
 
          while (!fInToken.eof() && !localError) {
-            string tokenValue = getValue(currentToken);
+            string tokenValue = getValue(nextToken);
    
-            string token_str = getValue(currentToken); // какой текст содержится в токене
-            if (currentToken.getTableId() == 5 || currentToken.getTableId() == 6) {
+            string token_str = getValue(nextToken); // какой текст содержится в токене
+            if (nextToken.getTableId() == 5 || nextToken.getTableId() == 6) {
                token_str = "ID";
             }
 
@@ -1007,24 +1011,26 @@ class Translator {
 
             bool isTerminalLegal = false; //допустим ли данный терминал
 
-            for (int i = 0; i < StateTable[currentRow].getTerminal().size() & !isTerminalLegal; i++) {
-               if (StateTable[currentRow].getTerminal()[i] == token_str) {
+            for (int i = 0; i < newTable[currentRow].getTerminal().size() & !isTerminalLegal; i++) {
+               if (newTable[currentRow].getTerminal()[i] == token_str) {
                   isTerminalLegal = true;
                }
             }
 
             if (isTerminalLegal) { //если получаем то, что ожидали то обрабатываем это
-
+               if (currentRow == 30) {
+                  cout << "da";
+               }
                bool change_row = false; //сменили ли мы строку
 
-               if (StateTable[currentRow].getStack()) {
+               if (newTable[currentRow].getStack()) {
                   ParseStack.push(currentRow + 1); //если надо получить в стек - ложим
                }
 
-               if (StateTable[currentRow].getAccept()) { //принимаем терминал и если надо - расширяем дерево
+               if (newTable[currentRow].getAccept()) { //принимаем терминал и если надо - расширяем дерево
 
                   if (isTreeBuildStarted) {
-                     treeVector.push_back(currentToken);
+                     treeVector.push_back(nextToken);
                   }
 
                   if (token_str == ";" || token_str == ",") { //если закончили разбор цельного оператора
@@ -1047,12 +1053,11 @@ class Translator {
                   }
 
                   //Если вдруг попытались присвоить что-то константе
-                  if (currentRow == 30 && currentToken.getTableId() != 5) {
-                     fOutError << "Ошибка в обработке " << getValue(currentToken) << " константе не может быть присовенно значение" << endl;
+                  if (currentRow == 30 && nextToken.getTableId() != 5) {
+                     fOutError << "Ошибка в обработке " << currentRow << getValue(nextToken) << " константе не может быть присовенно значение" << endl;
                      cout << "Lex error" << endl;
                      localError = true;
                   }
-
 
                   //и пошли дальше
                   currentToken = nextToken;
@@ -1064,33 +1069,45 @@ class Translator {
                   }
                }
 
-               if (StateTable[currentRow].getReturnState()) {
+               if (newTable[currentRow].getReturnState()) {
                   prevRow = currentRow; //запоминаем предыдущий
+                  
                   currentRow = ParseStack.top(); //если надо взять из стека - берём
+                  bool changed = false;
                   ParseStack.pop();
+                  while (!ParseStack.empty() && currentRow == ParseStack.top()) {
+                     ParseStack.pop();
+                     changed = true;
+                  }
+                  
+                  if (changed) {
+                     currentRow = ParseStack.top();
+                  }
+
                   change_row = true;
                }
 
 
-               if (!change_row && StateTable[currentRow].getJump() != 0) {
-                  currentRow = StateTable[currentRow].getJump(); //если надо прыгнуть - прыгаем
+               if (!change_row && newTable[currentRow].getJump() != 0) {
+                  currentRow = newTable[currentRow].getJump(); //если надо прыгнуть - прыгаем
                }
 
             }
-            else { //если произошщло несоответсвие
-               if (StateTable[currentRow].getError()) { //если можем судить что уже ошибка, то возвращаем её
+            else { 
+
+               if (newTable[currentRow].getError()) { //если можем судить что уже ошибка, то возвращаем её
                   localError = true;
-                  fOutError << "Ошибка в обработке " << getValue(currentToken) << endl;
+                  fOutError << "Ошибка в обработке " << currentRow << getValue(currentToken) << endl;
                   cout << "Lex error" << endl;
 
                   //Для РГЗ 1, начало - вывод альтернатив
                   fOutError << "Возможно на этом месте должно быть: ";
                   do {
-                     for (int i = 0; i < StateTable[currentRow].getTerminal().size(); i++) {
-                        fOutError << StateTable[currentRow].getTerminal()[i] << " ";
+                     for (int i = 0; i < newTable[currentRow].getTerminal().size(); i++) {
+                        fOutError << newTable[currentRow].getTerminal()[i] << " ";
                      }
                      currentRow--;
-                  } while (!StateTable[currentRow].getError());
+                  } while (!newTable[currentRow].getError());
                   fOutError << endl;
                   //Для РГЗ 1 - конец
                }
@@ -1101,7 +1118,8 @@ class Translator {
             prevTokenValue = token_str;
       
          }
-
+         
+         return isErrorFound;
       }
 };
 
@@ -1109,5 +1127,6 @@ int main()
 {
    Translator t;
    t.lexicalAnalysis("Source.txt", "Token.txt", "errorFile.txt");
+   t.syntaxAnalysis("Token.txt", "errorFile.txt");
    return 0;
 }
