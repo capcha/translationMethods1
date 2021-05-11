@@ -153,6 +153,10 @@ class Int {
       string getName() {
          return name;
       }
+      
+      void setIsInit(bool value) {
+         isInit = value;
+      }
 
       int getValue() {
          return value;
@@ -409,6 +413,14 @@ template<typename T> class MutableTable {
 
          return true;
       }
+      
+      void setElementById(int id, T element) {
+         data.at(id) = element;
+      }
+
+      int getTableSize() {
+         return data.size();
+      }
 
       bool getElementById(int id, T& result) {
          if (data.size() > id) {
@@ -443,7 +455,6 @@ template<typename T> class MutableTable {
          return false;
       }
 
-
       bool getIdByElement(string name, int& result) {
 
          T element = T(name);
@@ -477,26 +488,25 @@ class Translator {
       ifstream fIn, fInToken;
       ofstream fOutToken, fOutError;
 
-      vector<StateTableRow> newTable; //таблица разбора
-      stack<int> ParseStack; //стек, используемый для разбора
+      vector<StateTableRow> newTable; 
+      stack<int> ParseStack; 
 
       struct TreeElement {
-         TreeElement *left, *right; //правое и левое поддерева
+         TreeElement *left, *right; 
 
-         TreeElement() {	//конструктор по умолчанию
+         TreeElement() {	
             left = 0;
             right = 0;
          }
 
-         int type; //Тип элемент
-                  //0 - знак операции(или присваивания)
+         int type; //0 - знак операции(или присваивания)
                   //1 - переменная
 
-         string id; //хранится идентификаторв, в виде строки
+         string id; 
       };
 
-      TreeElement *treeRoot; //корень дерева
-      TreeElement *currentNode; //Указатель на текущий эллемент дерева
+      TreeElement *treeRoot; 
+      TreeElement *currentNode;
 
       bool analyzeString(string str) {
          trim(str);
@@ -746,6 +756,8 @@ class Translator {
          TreeElement* little_tree_beg = new TreeElement;
 
          if (code.size() > 2) {
+            //code.pop_back();
+
             buildSubTree(code, little_tree_beg);
 
             if (treeRoot == 0) {
@@ -764,60 +776,50 @@ class Translator {
       }
 
       void buildSubTree(vector<Token> code, TreeElement*& beg) {
+         vector<Token> L, R; 
 
-         vector<Token> L, R; //левое и правое поддеревья
-
-         int bracket_num = 0; //количество скобок
+         int bracket_num = 0;
          int L_num = 0;
 
          bool flag = false;
 
-
-         //Если последний токен
          if (code.size() == 1 && (getValue(code[0]) == ";" || getValue(code[0]) == ",")) {
             beg->id = ";";
             beg->type = 2;
          }
          else {
 
-            vector<int> opers_n; //номера "верхних операций"
+            vector<int> opers_n; 
 
-            //Находим все "верхние операции"
             for (int i = 0; i < code.size(); i++) {
                if (getValue(code[i]) == "(") bracket_num++;
                if (getValue(code[i]) == ")") bracket_num--;
                if (code[i].getTableId() == 2 && bracket_num == 0) opers_n.push_back(i);
             }
 
-            if (opers_n.size() == 0) { //ели операций нет пропуска всё связанное с ними
+            if (opers_n.size() == 0) { 
                flag = false;
             }
-            else { //если есть - ищим операцию с наименьшим приоритетом
-               int low_num = -1; //номер нужной нам операции
-               //Сначало проверка на наличие равенства
+            else { 
+               int low_num = -1; 
                for (int j = 0; j < opers_n.size() && low_num == -1; j++)
                   if (getValue(code[opers_n[j]]) == "=" || getValue(code[opers_n[j]]) == "+=" || getValue(code[opers_n[j]]) == "-=" || getValue(code[opers_n[j]]) == "*=")
                      low_num = opers_n[j];
                //Потом на + и -
                for (int j = opers_n.size() - 1; j >= 0 && low_num == -1; j--) {
                   if (getValue(code[opers_n[j]]) == "+" || getValue(code[opers_n[j]]) == "-") {
-                     low_num = opers_n[j]; //нашли нашу операцию
+                     low_num = opers_n[j];
                   }
                }
 
-               //Если не нашли выбираем последнюю операцию
                if (low_num == -1)
                   low_num = opers_n[opers_n.size() - 1];
 
-               //Привет интегрулятору
-
                if (getValue(code[0]) == "(") L_num++;
 
-               //Формируем левое поддерево
                for (int j = 0; L_num < low_num; L_num++, j++)
                   L.push_back(code[L_num]);
 
-               //Формируем правое поддерево
                int R_num = 0;
                int l;
                if (getValue(code[low_num + 1]) == "(") R_num++;
@@ -907,7 +909,7 @@ class Translator {
          ifstream fInStateTable("newTable.txt");
 
          while (!fInStateTable.eof()) {
-            StateTableRow stateTableRow; //добавляемый эллемент
+            StateTableRow stateTableRow; 
             string inputString;
 
             fInStateTable >> inputString;
@@ -998,7 +1000,7 @@ class Translator {
          while (!fInToken.eof() && !localError) {
             string tokenValue = getValue(nextToken);
    
-            string token_str = getValue(nextToken); // какой текст содержится в токене
+            string token_str = getValue(nextToken); 
             if (nextToken.getTableId() == 5 || nextToken.getTableId() == 6) {
                token_str = "ID";
             }
@@ -1007,7 +1009,7 @@ class Translator {
                isTreeBuildStarted = true;
             }
 
-            bool isTerminalLegal = false; //допустим ли данный терминал
+            bool isTerminalLegal = false; 
 
             for (int i = 0; i < newTable[currentRow].getTerminal().size() & !isTerminalLegal; i++) {
                if (newTable[currentRow].getTerminal()[i] == token_str) {
@@ -1015,50 +1017,68 @@ class Translator {
                }
             }
 
-            if (isTerminalLegal) { //если получаем то, что ожидали то обрабатываем это
-               
-               if (currentRow == 76) {
-                  cout << "dasd";
-               }
-
-               bool change_row = false; //сменили ли мы строку
+            if (isTerminalLegal) { 
+               bool change_row = false; 
 
                if (newTable[currentRow].getStack()) {
-                  ParseStack.push(currentRow + 1); //если надо получить в стек - ложим
+                  ParseStack.push(currentRow + 1);
                }
 
-               if (newTable[currentRow].getAccept()) { //принимаем терминал и если надо - расширяем дерево
+               if (newTable[currentRow].getAccept()) { 
 
                   if (isTreeBuildStarted) {
                      treeVector.push_back(nextToken);
                   }
 
-                  if (token_str == ";" || token_str == ",") { //если закончили разбор цельного оператора
-                     buildTree(treeVector); //добавили всё что нужно в дерево
-
-                     //и перешли в исходное состояние
+                  if (token_str == ";" || token_str == ",") { 
+                     buildTree(treeVector);
                      treeVector.clear();
                      isTreeBuildStarted = false;
                   }
 
-                  //все, обнуляем типа больше нет
                   if (token_str == ";") {
                      isInt = false;
                   }
 
-                  //Если мы нашли тип, то мы его запоминаем
                   if (token_str == "int") {
                      isInt = true;
                   }
 
-                  //Если вдруг попытались присвоить что-то константе
                   if (token_str == "=" && currentToken.getTableId() == 6) {
-                     fOutError << "Ошибка в обработке " << getValue(currentToken) << " константе не может быть присовенно значение" << endl;
-                     cout << "Lex error" << endl;
+                     fOutError << "Ошибка в строке " << currentRow << ", константе не может быть присовенно значение" << endl;
+                     cout << "Ошибка" << endl;
                      localError = true;
                   }
 
-                  //и пошли дальше
+                  if (isInt && token_str == "=" && currentToken.getTableId() == 5) {
+                     Int buffer;
+                     integers.getElementById(currentToken.getRowNumber(), buffer);
+
+                     if (buffer.getIsInit()) {
+                        fOutError << "Ошибка в строке " << currentRow << ", Переменная " << getValue(currentToken) << " уже инициализирована инициализирована" << endl;
+                        cout << "Ошибка" << endl;
+                        localError = true;
+                     }
+                     else {
+                        buffer.setIsInit(true);
+
+                        integers.setElementById(currentToken.getRowNumber(), buffer);
+                     }
+
+                  }
+
+                  if (token_str == "=" && currentToken.getTableId() == 5) {
+                     Int buffer;
+                     integers.getElementById(currentToken.getRowNumber(), buffer);
+
+                     if (!buffer.getIsInit()) {
+                        fOutError << "Ошибка в строке " << currentRow << ", Переменная " << getValue(currentToken) << " не инициализирована" << endl;
+                        cout << "Ошибка" << endl;
+                        localError = true;
+                     }
+
+                  }
+
                   currentToken = nextToken;
                   if (!fInToken.eof()) {
                      fInToken >> tableId;
@@ -1069,9 +1089,9 @@ class Translator {
                }
 
                if (newTable[currentRow].getReturnState()) {
-                  prevRow = currentRow; //запоминаем предыдущий
+                  prevRow = currentRow; 
                   
-                  currentRow = ParseStack.top(); //если надо взять из стека - берём
+                  currentRow = ParseStack.top();
                   bool changed = false;
                   ParseStack.pop();
                   while (!ParseStack.empty() && currentRow == ParseStack.top()) {
@@ -1088,18 +1108,17 @@ class Translator {
 
 
                if (!change_row && newTable[currentRow].getJump() != 0) {
-                  currentRow = newTable[currentRow].getJump(); //если надо прыгнуть - прыгаем
+                  currentRow = newTable[currentRow].getJump(); 
                }
 
             }
             else { 
 
-               if (newTable[currentRow].getError()) { //если можем судить что уже ошибка, то возвращаем её
+               if (newTable[currentRow].getError()) { 
                   localError = true;
-                  fOutError << "Ошибка в обработке " << currentRow << getValue(currentToken) << endl;
-                  cout << "Lex error" << endl;
+                  fOutError << "Ошибка в строке " << currentRow << ", символы: " << getValue(nextToken) << endl;
+                  cout << "Ошибка" << endl;
 
-                  //Для РГЗ 1, начало - вывод альтернатив
                   fOutError << "Возможно на этом месте должно быть: ";
                   do {
                      for (int i = 0; i < newTable[currentRow].getTerminal().size(); i++) {
@@ -1108,9 +1127,8 @@ class Translator {
                      currentRow--;
                   } while (!newTable[currentRow].getError());
                   fOutError << endl;
-                  //Для РГЗ 1 - конец
                }
-               else { //Если нет - переходим на следующий
+               else { 
                   currentRow++;
                }
             }
@@ -1139,8 +1157,7 @@ class Translator {
 
 };
 
-int main()
-{
+int main() {
    Translator t;
    t.lexicalAnalysis("Source.txt", "Token.txt", "errorFile.txt");
 
