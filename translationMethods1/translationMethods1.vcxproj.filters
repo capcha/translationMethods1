@@ -42,5 +42,8 @@
     <Text Include="newTable.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
+    <Text Include="tree.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
   </ItemGroup>
 </Project>

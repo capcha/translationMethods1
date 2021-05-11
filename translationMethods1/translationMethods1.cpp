@@ -481,6 +481,7 @@ class Translator {
       stack<int> ParseStack; //стек, используемый для разбора
 
       struct TreeElement {
+         TreeElement *left, *right; //правое и левое поддерева
 
          TreeElement() {	//конструктор по умолчанию
             left = 0;
@@ -492,8 +493,6 @@ class Translator {
                   //1 - переменная
 
          string id; //хранится идентификаторв, в виде строки
-
-         TreeElement* left, * right; //правое и левое поддерева
       };
 
       TreeElement *treeRoot; //корень дерева
@@ -971,7 +970,6 @@ class Translator {
       }
    
       bool syntaxAnalysis(string tokenFile, string errorFile) {
-         bool isErrorFound = false;
          string str;
 
          fInToken.open(tokenFile.c_str(), ios::in);
@@ -1019,6 +1017,10 @@ class Translator {
 
             if (isTerminalLegal) { //если получаем то, что ожидали то обрабатываем это
                
+               if (currentRow == 76) {
+                  cout << "dasd";
+               }
+
                bool change_row = false; //сменили ли мы строку
 
                if (newTable[currentRow].getStack()) {
@@ -1113,17 +1115,40 @@ class Translator {
                }
             }
             prevTokenValue = token_str;
-      
          }
          
-         return isErrorFound;
+         return localError;
       }
+
+      void treeOutput(string f_name) {
+         ofstream out_f(f_name.c_str());
+
+         treeOutputRecurent(out_f, treeRoot);
+
+         out_f.close();
+      }
+
+      void treeOutputRecurent(ofstream& out_f, TreeElement* beg) {
+         if (beg != 0) {
+            if (beg->left != 0) treeOutputRecurent(out_f, beg->left);
+            if (beg->right != 0) treeOutputRecurent(out_f, beg->right);
+
+            out_f << beg->id << " ";
+         }
+      }
+
 };
 
 int main()
 {
    Translator t;
    t.lexicalAnalysis("Source.txt", "Token.txt", "errorFile.txt");
-   t.syntaxAnalysis("Token.txt", "errorFile.txt");
+
+   if (!t.syntaxAnalysis("Token.txt", "errorFile.txt")) {
+      cout << "Success!!";
+   }
+
+   t.treeOutput("tree.txt");
+
    return 0;
 }
