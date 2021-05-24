@@ -225,7 +225,7 @@ class Token {
          rowNumber = _rowNumber;
          chainNumber = _chainNumber;
       }
-      
+
    private:
       int tableId;
       int rowNumber;
@@ -290,6 +290,45 @@ class StateTableRow {
       bool returnState;
       bool error;
 
+};
+
+class PostfixElem {
+   public:
+      string id;
+      int type;
+      int table;
+
+      PostfixElem()
+      {
+         id = "", type = 0, table = -1;
+      }
+
+      PostfixElem(string id_, int type_, int table_)
+      {
+         id = id_, type = type_, table = table_;
+      }
+
+      PostfixElem(string id_, int type_)
+      {
+         id = id_, type = type_, table = -1;
+      }
+
+      PostfixElem(string id_)
+      {
+         id = id_, type = 1, table = -1;
+      }
+
+      friend bool operator == (const PostfixElem& f, const PostfixElem& l)
+      {
+         if (f.type == l.type && f.table == l.table && f.id == l.id) return true;
+         return false;
+      }
+
+      friend ostream& operator << (ostream& ostream_, const PostfixElem& pe_)
+      {
+         ostream_ << pe_.id;
+         return ostream_;
+      }
 };
 
 template<typename T> class ImmutableTable {
@@ -898,6 +937,8 @@ class Translator {
       }
 
    public:
+      vector<PostfixElem> PostfixVector;
+
       Translator() {
          alphabet = ImmutableTable<AlphabetUnit>("Alphabet.txt"); //1
          operators = ImmutableTable<Operator>("Operators.txt");//2
@@ -971,116 +1012,137 @@ class Translator {
          return !isErrorFound;
       }
    
+      // Синтаксический анализатор
       bool syntaxAnalysis(string tokenFile, string errorFile) {
          string str;
 
          fInToken.open(tokenFile.c_str(), ios::in);
          fOutError.open(errorFile.c_str(), ios::out);
-
          Token currentToken, nextToken;
-         
+         stack<int> ParseStack;
+         bool errorFlag = false;
+         int currentRow = 0;
+         bool isInt = false; // Находимся ли мы в строке с объявлением типа
+         int type_type = 0;      // Если находимся, то какой тип объявляем
+         bool need_postfix = false;      // Нужно ли выполнять построение постфиксной записи для данной строки
+         vector<Token> code_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
+         bool need_array_resize = false;         // Объявляем ли мы сейчас размер массива
+         vector<Token> array_resize_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
+         bool eof_flag = fInToken.eof();    // Флаг конца файла (чтобы считать последний токен)
+
          int tableId, rowId, chainId;
 
          fInToken >> tableId;
          fInToken >> rowId;
          fInToken >> chainId;
 
+         currentToken = Token(tableId, rowId, chainId);
+
+         fInToken >> tableId;
+         fInToken >> rowId;
+         fInToken >> chainId;
          nextToken = Token(tableId, rowId, chainId);
-         
-         int currentRow = 0, prevRow;      
-         bool isInt = false;
-   
-         bool localError = false, isTreeBuildStarted = false;
+         while (!eof_flag && !errorFlag)
+         {
+            string tokenValue = getValue(currentToken);
+            trim(tokenValue);
 
-         vector<Token> treeVector;
-         string prevTokenValue;
+            if (currentToken.getTableId() == 5 || currentToken.getTableId() == 6) tokenValue = "ID";
 
-         int identNumber, type;
+            // Ищем терминалы из списка
+            bool find_terminal = false;
 
-         while (!fInToken.eof() && !localError) {
-            string tokenValue = getValue(nextToken);
-   
-            string token_str = getValue(nextToken); 
-            if (nextToken.getTableId() == 5 || nextToken.getTableId() == 6) {
-               token_str = "ID";
+            if (currentRow == 51) {
+               //cout << "adsd/";
             }
 
-            if (token_str == "ID") {
-               isTreeBuildStarted = true;
+            for (int i = 0; i < (int)newTable[currentRow].getTerminal().size() && !find_terminal; i++)
+            {
+               if (newTable[currentRow].getTerminal()[i] == tokenValue)
+                  find_terminal = true;
             }
 
-            bool isTerminalLegal = false; 
+            // Если нашли
+            if (find_terminal) {
+               
 
-            for (int i = 0; i < newTable[currentRow].getTerminal().size() & !isTerminalLegal; i++) {
-               if (newTable[currentRow].getTerminal()[i] == token_str) {
-                  isTerminalLegal = true;
-               }
-            }
-
-            if (isTerminalLegal) { 
-               bool change_row = false; 
-
-               if (newTable[currentRow].getStack()) {
+               if (newTable[currentRow].getStack())
                   ParseStack.push(currentRow + 1);
-               }
 
-               if (newTable[currentRow].getAccept()) { 
+               if (newTable[currentRow].getAccept())
+               {
+                  if ((tokenValue == "ID") &&
+                     (getValue(nextToken) == "=" ||
+                        getValue(nextToken) == "+=" ||
+                        getValue(nextToken) == "-=" ||
+                        getValue(nextToken) == "*=" && !isInt))
+                     need_postfix = true;
 
-                  if (isTreeBuildStarted) {
-                     treeVector.push_back(nextToken);
+                  if ((tokenValue == "ID") && isInt)
+                     need_array_resize = true;
+
+                  // Обработка необъявленного типа
+                  if (tokenValue == "=" && currentToken.getTableId() == 5)
+                  {
+                     Int buffer;
+                     integers.getElementById(currentToken.getRowNumber(), buffer);
+                     if (buffer.getIsInit() == 0)
+                     {
+                        errorFlag = true;
+                        fOutError << "Syntax Error: Undefined identifier \"" << buffer.getName() << "\"" << endl;
+                        cerr << "Syntax Error: Undefined identifier \"" << buffer.getName() << "\"" << endl;
+                     }
                   }
 
-                  if (token_str == ";" || token_str == ",") { 
-                     buildTree(treeVector);
-                     treeVector.clear();
-                     isTreeBuildStarted = false;
+                  if (need_postfix) {
+                     code_expr_infix.push_back(currentToken);
                   }
 
-                  if (token_str == ";") {
+                  if (need_array_resize) {
+                     array_resize_expr_infix.push_back(currentToken);
+                  }
+
+                  // Если закончили разбор присваивания или части объявления
+                  if (tokenValue == ";" || tokenValue == ",")
+                  {
+                     // Добавим все, что разобрали, в постфиксную запись
+                     if (!postfixExpr(code_expr_infix))
+                        errorFlag = true;
+                     if (need_array_resize && !errorFlag)
+                     {
+                        vector<PostfixElem> array_resize_vect;
+                        if (!postfixExpr(array_resize_expr_infix, array_resize_vect))
+                        {
+                           errorFlag = true;
+                        }
+                     }
+                     // Сбрасываем все флаги
+                     code_expr_infix.clear();
+                     array_resize_expr_infix.clear();
+                     need_postfix = false;
+                     need_array_resize = false;
+                  }
+
+                  // Если закончили разбор объявления, сбросим флаг объявления
+                  if (tokenValue == ";") {
                      isInt = false;
                   }
 
-                  if (token_str == "int") {
+                  // Если попался тип, запоминаем его
+                  if (tokenValue == "int") {
                      isInt = true;
                   }
 
-                  if (token_str == "=" && currentToken.getTableId() == 6) {
-                     fOutError << "Ошибка в строке " << currentRow << ", константе не может быть присовенно значение" << endl;
-                     cout << "Ошибка" << endl;
-                     localError = true;
-                  }
-
-                  if (isInt && token_str == "=" && currentToken.getTableId() == 5) {
+                  // Заносим тип в таблицу идентификаторов
+                  if (tokenValue == "ID" && isInt)
+                  {
                      Int buffer;
                      integers.getElementById(currentToken.getRowNumber(), buffer);
-
-                     if (buffer.getIsInit()) {
-                        fOutError << "Ошибка в строке " << currentRow << ", Переменная " << getValue(currentToken) << " уже инициализирована инициализирована" << endl;
-                        cout << "Ошибка" << endl;
-                        localError = true;
-                     }
-                     else {
-                        buffer.setIsInit(true);
-
-                        integers.setElementById(currentToken.getRowNumber(), buffer);
-                     }
-
                   }
 
-                  if (token_str == "=" && currentToken.getTableId() == 5) {
-                     Int buffer;
-                     integers.getElementById(currentToken.getRowNumber(), buffer);
-
-                     if (!buffer.getIsInit()) {
-                        fOutError << "Ошибка в строке " << currentRow << ", Переменная " << getValue(currentToken) << " не инициализирована" << endl;
-                        cout << "Ошибка" << endl;
-                        localError = true;
-                     }
-
-                  }
-
+                  eof_flag = fInToken.eof();
                   currentToken = nextToken;
-                  if (!fInToken.eof()) {
+                  if (!eof_flag) {
                      fInToken >> tableId;
                      fInToken >> rowId;
                      fInToken >> chainId;
@@ -1088,84 +1150,174 @@ class Translator {
                   }
                }
 
-               if (newTable[currentRow].getReturnState()) {
-                  prevRow = currentRow; 
-                  
-                  currentRow = ParseStack.top();
-                  bool changed = false;
-                  ParseStack.pop();
-                  while (!ParseStack.empty() && currentRow == ParseStack.top()) {
-                     ParseStack.pop();
-                     changed = true;
-                  }
-                  
-                  if (changed) {
+               if (newTable[currentRow].getReturnState())
+               {
+                  if (!ParseStack.empty())
+                  {
                      currentRow = ParseStack.top();
+                     ParseStack.pop();
                   }
-
-                  change_row = true;
+                  else // Если внезапно стек пуст
+                  {
+                     errorFlag = true;
+                     cerr << "Syntax Error: Parse stack is empty!" << endl;
+                     cerr << "Return requested by row " << currentRow 
+                        << " (value = \"" << getValue(currentToken) << "\")" << endl;
+                     fOutError << "Syntax Error: Parse stack is empty!" << endl;
+                     fOutError << "Return requested by row " << currentRow 
+                        << " (value = \"" << getValue(currentToken) << "\")" << endl;
+                  }
                }
-
-
-               if (!change_row && newTable[currentRow].getJump() != 0) {
-                  currentRow = newTable[currentRow].getJump(); 
+               else {
+                  currentRow = newTable[currentRow].getJump();
                }
-
             }
-            else { 
-
-               if (newTable[currentRow].getError()) { 
-                  localError = true;
-                  fOutError << "Ошибка в строке " << currentRow << ", символы: " << getValue(nextToken) << endl;
-                  cout << "Ошибка" << endl;
-
-                  fOutError << "Возможно на этом месте должно быть: ";
-                  do {
-                     for (int i = 0; i < newTable[currentRow].getTerminal().size(); i++) {
-                        fOutError << newTable[currentRow].getTerminal()[i] << " ";
-                     }
-                     currentRow--;
-                  } while (!newTable[currentRow].getError());
+            else
+            {
+               // Если ошибка безальтернативная
+               if (newTable[currentRow].getError())
+               {
+                  errorFlag = true;
+                  fOutError << "Syntax Error: Unexpected terminal \"" << getValue(currentToken) << "\"" << endl;
+                  fOutError << "Must be: ";
+                  for (int i = 0; i < (int)newTable[currentRow].getTerminal().size(); i++)
+                     fOutError << " " << newTable[currentRow].getTerminal()[i] << " ";
                   fOutError << endl;
+                  cerr << "Syntax Error: Unexpected terminal \"" << getValue(currentToken) << "\"" << endl;
+                  cerr << "Must be: ";
+                  for (int i = 0; i < (int)newTable[currentRow].getTerminal().size(); i++)
+                     cerr << " " << newTable[currentRow].getTerminal()[i] << " ";
+                  cerr << endl;
                }
-               else { 
+               else
+               {
                   currentRow++;
                }
             }
-            prevTokenValue = token_str;
+         };
+
+         fInToken.close();
+         fOutError.close();
+         return !errorFlag;
+      }
+
+      // Построение постфиксной записи
+      bool postfixExpr(vector<Token> t)
+      {
+         vector<PostfixElem> tempVector;
+         bool errorFlag = postfixExpr(t, tempVector);
+         for (int i = 0; errorFlag && i < (int)tempVector.size(); i++)
+            PostfixVector.push_back(tempVector[i]);
+         return errorFlag;
+      }
+
+      // Построение постфиксной записи (локально)
+      bool postfixExpr(vector<Token> t, vector<PostfixElem>& tempVector)
+      {
+         stack<string> tempStack;
+         bool errorFlag = false;
+         int index = 0;
+         while (index < (int)t.size() && !errorFlag)
+         {
+            int i;
+            for (i = index; i < (int)t.size() && !errorFlag && getValue(t[i]) != ";" && getValue(t[i]) != ","; i++)
+            {
+               string token_text = getValue(t[i]);
+               if (t[i].getTableId() == 5 || t[i].getTableId() == 6)
+               {
+                  tempVector.push_back(PostfixElem(token_text, 1, t[i].getTableId()));
+               }
+               else if (token_text == "(")
+               {
+                  tempStack.push(token_text);
+               }
+               else if (token_text == ")")
+               {
+                  while (!tempStack.empty() && tempStack.top() != "(")
+                  {
+                     string tmpstr = tempStack.top();
+                     tempVector.push_back(PostfixElem(tmpstr));
+                     tempStack.pop();
+                  }
+                  if (tempStack.empty())
+                  {
+                     cerr << "Syntax Error: Unexpected \")\" !" << endl;
+                     fOutError << "Syntax Error: Unexpected \")\" !" << endl;
+                     errorFlag = true;
+                  }
+                  else
+                  {
+                     tempStack.pop();
+                  }
+               }
+               else if (t[i].getTableId() == 2)
+               {
+                  while (!tempStack.empty() && priority_le(token_text, tempStack.top()))
+                  {
+                     string tmpstr = tempStack.top();
+                     tempVector.push_back(PostfixElem(tmpstr));
+                     tempStack.pop();
+                  }
+                  tempStack.push(token_text);
+               }
+            }
+            if (errorFlag)
+            {
+               tempVector.clear();
+               return false;
+            }
+            index = i + 1;
+            while (!tempStack.empty()) {
+               string tmpstr = tempStack.top();
+               tempVector.push_back(PostfixElem(tmpstr));
+               tempStack.pop();
+            }
+            tempVector.push_back(PostfixElem(";", 4));
          }
-         
-         return localError;
+         return true;
       }
 
-      void treeOutput(string f_name) {
-         ofstream out_f(f_name.c_str());
-
-         treeOutputRecurent(out_f, treeRoot);
-
-         out_f.close();
-      }
-
-      void treeOutputRecurent(ofstream& out_f, TreeElement* beg) {
-         if (beg != 0) {
-            if (beg->left != 0) treeOutputRecurent(out_f, beg->left);
-            if (beg->right != 0) treeOutputRecurent(out_f, beg->right);
-
-            out_f << beg->id << " ";
+      // Печать постфиксной записи в файл и на экран
+      void postfixOutput(string file_tree)
+      {
+         ofstream out(file_tree.c_str());
+         cout << "Postfix notation:" << endl;
+         for (int i = 0; i < (int)PostfixVector.size(); i++)
+         {
+            cout << PostfixVector[i] << " ";
+            out << PostfixVector[i] << " ";
          }
+         cout << endl;
+         out.close();
       }
+
+      // Сравнение приоритетов операций
+      bool priority_le(string what, string with_what)
+      {
+         int pw = 0, pww = 0;
+         if (what == "=" || what == "+=" || what == "-=" || what == "*=") pw = 10;
+         else if (what == "!="  || what == "<" || what == "==") pw = 20;
+         else if (what == "+" || what == "-") pw = 30;
+         else pw = 40;
+         if (with_what == "=" || with_what == "+=" || with_what == "-=" || with_what == "*=") pww = 10;
+         else if (with_what == "!=" || with_what == "<" || with_what == "==") pww = 20;
+         else if (with_what == "+" || with_what == "-") pww = 30;
+         else if (with_what == "*") pww = 40;
+         if (pw <= pww) return true;
+         return false;
+      };
 
 };
 
 int main() {
    Translator t;
-   t.lexicalAnalysis("Source.txt", "Token.txt", "errorFile.txt");
+   t.lexicalAnalysis("Source.txt", "token.txt", "errorFile.txt");
 
-   if (!t.syntaxAnalysis("Token.txt", "errorFile.txt")) {
+   if (t.syntaxAnalysis("token.txt", "errorFile.txt")) {
       cout << "Success!!";
    }
 
-   t.treeOutput("tree.txt");
+   t.postfixOutput("tree.txt");
 
    return 0;
 }
