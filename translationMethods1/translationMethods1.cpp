@@ -463,7 +463,18 @@ template<typename T> class MutableTable {
 
       bool getElementByValue(string value, T& result) {
          for (int i = 0; i < data.size(); i++) {
-            if (data[i].getName() == value) {
+            if (data[i].getValue() == value) {
+               result = data[i];
+               return true;
+            }
+         }
+
+         return false;
+      }
+
+      bool getElementByName(string name, T& result) {
+         for (int i = 0; i < data.size(); i++) {
+            if (data[i].getName() == name) {
                result = data[i];
                return true;
             }
@@ -1371,7 +1382,7 @@ class Translator {
             stack<PostfixElem> array_stack;
             bool array_assign_here;
             Int lex_array_assign;
-            integers.getElementByValue((PostfixVector[index].id), lex_array_assign);
+            integers.getElementByName(PostfixVector[index].id, lex_array_assign);
             bool array_assign_is_accepted = false;
             //stringstream array_assign_address;
             bool maybe_uninit_flag = false;
@@ -1398,7 +1409,7 @@ class Translator {
                      values.push_back("");
                   }
                   Int lex_array_check;
-                  integers.getElementByValue((PostfixVector[index].id), lex_array_check);
+                  integers.getElementByName(PostfixVector[index].id, lex_array_check);
 
                   if (PostfixVector[i].table == 5)
                   {
@@ -1431,7 +1442,7 @@ class Translator {
 
                   if (oper1p.table == 5)
                   {
-                     integers.getElementByValue((oper1p.id), lex);
+                     integers.getElementByName(oper1p.id, lex);
                      if (PostfixVector[i].id != "="
                         /*&& PostfixVector[i].id != "+=" && PostfixVector[i].id != "-=" && PostfixVector[i].id != "*="*/)
                      {
@@ -1442,7 +1453,7 @@ class Translator {
                   }
                   else if (oper1p.table == 6)
                   {
-                     constants.getElementById(stoi(oper1p.id), constant);
+                     constants.getElementByValue(oper1p.id, constant);
                      if (PostfixVector[i].id != "=")
                      {
                            outcode << "\tfild\tdword [const_" << constant.getValue() << salt << "]\n";
@@ -1451,12 +1462,12 @@ class Translator {
 
                   if (oper2p.table == 5)
                   {
-                     integers.getElementByValue((oper2p.id), lex);
+                     integers.getElementByName(oper2p.id, lex);
                         outcode << "\tfild\tdword [" << oper2p.id << "]\n";
                   }
                   else if (oper2p.table == 6)
                   {
-                     constants.getElementById(stoi(oper2p.id), constant);
+                     constants.getElementByValue(oper2p.id, constant);
                      outcode << "\tfild\tdword [const_" << constant.getValue() << "_" <<  salt << "]\n";
                   }
 
@@ -1532,7 +1543,7 @@ class Translator {
                         outcode << "\tfistp\tdword [" << oper1p.id << "]\n";
                         Int temp;
                         int id;
-                        integers.getElementByValue((PostfixVector[index].id), temp);
+                        integers.getElementByName(PostfixVector[index].id, temp);
                         integers.getIdByElement(temp, id);
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
@@ -1626,7 +1637,7 @@ class Translator {
                if (i == index && PostfixVector[i + 2].id == "=" && PostfixVector[i + 1].table == 6)
                {
                   Int lex_init;
-                  if (integers.getElementByValue(PostfixVector[i].id, lex_init))
+                  if (integers.getElementByName(PostfixVector[i].id, lex_init))
                   {
                      bool found = false;
                      int j;
@@ -1639,7 +1650,7 @@ class Translator {
                      {
                         Int temp; 
                         int id; 
-                        integers.getElementByValue((PostfixVector[index].id), temp);
+                        integers.getElementByName(PostfixVector[index].id, temp);
                         integers.getIdByElement(temp, id);
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
@@ -1668,7 +1679,7 @@ class Translator {
             Int lex;
             if (variables[i].table == 5)
             {
-               integers.getElementByValue((variables[i].id), lex);
+               integers.getElementByName(variables[i].id, lex);
                
                   if (lex.getIsInit() == 0)
                   {
@@ -1709,7 +1720,6 @@ class Translator {
                            printf_out << "\tmov\t\tedx, " << 0 << "\n";
                            printf_out << "\tpush\tedx" << "\n";
                            printf_out << "\tpush\tdword msg_" << variables[i].id << "_" << salt << "\n";
-                           printf_out << "\tpush\tdword printf_arr_" << salt << "\n";
                            printf_out << "\tcall\tprintf\n\tadd\t\tesp, 12\n";
                            printf_out << "\tpush\tdword [" << variables[i].id << "+" << 0 << "*4]\n";
                            printf_out << "\tpush\tdword printf_int_" << salt << "\n";
@@ -1719,7 +1729,7 @@ class Translator {
             } else {
                int hash, chain;
                Constant constant;
-               constants.getElementById(stoi(variables[i].id), constant);
+               constants.getElementByValue(variables[i].id, constant);
                fOutToken << "\tconst_" << constant.getValue() << ":\tdd\t" << variables[i].id << "\n";
             }
          }
@@ -1730,13 +1740,12 @@ class Translator {
          }
          if (need_printf)
          {
-            fOutToken << "\tprintf_flt_" << salt << ":\tdb\t\"%f\",10,0\n";
             fOutToken << "\tprintf_int_" << salt << ":\tdb\t\"%i\",10,0\n";
             fOutToken << "\tprintf_str_" << salt << ":\tdb\t\"%s = \",0\n";
          }
          if (need_bss)
          {
-            if (need_printf) fOutToken << "\tprintf_arr_" << salt << ":\tdb\t\"%s[%i] = \",0\n";
+            
             fOutToken << "section .bss\n" << bss_out.str();
          }
 
