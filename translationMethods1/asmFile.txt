@@ -1,10 +1,6 @@
-extern printf
 section .data
-	msg_a_:	db	"a",0
 	const_15:	dd	15
 	const_4:	dd	4
-	printf_int_:	db	"%i",10,0
-	printf_str_:	db	"%s = ",0
 section .bss
 	a:	resd	1
 section .text
@@ -15,20 +11,5 @@ main:
 	fild	dword [const_4_]
 	fsub
 	fistp	dword [a]
-	mov		edx, 0
-	push	edx
-	push	dword msg_a_
-	call	printf
-	add		esp, 12
-	push	dword [a+0*4]
-	push	dword printf_int_
-	call	printf
-	add		esp, 8
-	mov		eax, 0
-	ret
-
-	mov		eax, 0
-	ret
-	dd		esp, 8
 	mov		eax, 0
 	ret

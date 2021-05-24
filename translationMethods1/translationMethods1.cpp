@@ -1772,7 +1772,7 @@ int main() {
 
    t.postfixOutput("tree.txt");
 
-   t.castToAsm("asmFile.txt", "errorFile.txt", true, false);
+   t.castToAsm("asmFile.txt", "errorFile.txt", false, false);
 
    return 0;
 }
