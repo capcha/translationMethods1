@@ -1,5 +1,7 @@
 void main() {
   int a = 2;
-  a = 3 + 4 - 15 * 13;
+
+  a = 15 - 4;
+
   return 3;
 }

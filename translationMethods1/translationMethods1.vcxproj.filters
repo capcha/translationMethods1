@@ -45,5 +45,8 @@
     <Text Include="tree.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
+    <Text Include="asmFile.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
   </ItemGroup>
 </Project>

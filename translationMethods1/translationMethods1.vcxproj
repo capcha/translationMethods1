@@ -144,6 +144,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="Alphabet.txt" />
+    <Text Include="asmFile.txt" />
     <Text Include="Constant.txt" />
     <Text Include="errorFile.txt" />
     <Text Include="newTable.txt" />
