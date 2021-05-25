@@ -1,9 +1,7 @@
 void main() {
-  int a = 16;
+  int a = 16, b = 3;
 
-  if (a == 3) {
-	a = 15 - 4;
-  } 
+  b = a + b;
 
-  return 3;
+  return 0;
 }

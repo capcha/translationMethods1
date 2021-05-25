@@ -158,6 +158,10 @@ class Int {
          isInit = value;
       }
 
+      void setValue(int _value) {
+         value = _value;
+      }
+ 
       int getValue() {
          return value;
       }
@@ -1051,7 +1055,6 @@ class Translator {
          int type_type = 0;      // Если находимся, то какой тип объявляем
          bool need_postfix = false;      // Нужно ли выполнять построение постфиксной записи для данной строки
          vector<Token> code_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
-         vector<Token> array_resize_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
          bool eof_flag = fInToken.eof();    // Флаг конца файла (чтобы считать последний токен)
 
          int tableId, rowId, chainId;
@@ -1117,7 +1120,7 @@ class Translator {
                      need_postfix = true;
                   }
 
-                  if (tokenValue == "else" ) {
+                  if (tokenValue == "else") {
                      parseC = true;
                      need_postfix = true;
                   }
@@ -1148,7 +1151,6 @@ class Translator {
                      
                      // Сбрасываем все флаги
                      code_expr_infix.clear();
-                     array_resize_expr_infix.clear();
                      need_postfix = false;
                   }
 
@@ -1297,6 +1299,16 @@ class Translator {
                return false;
             }
             index = i + 1;
+
+            if (tempVector.size() == 2 && tempVector[0].table == 5) {
+               Int buffer; int id;
+               integers.getElementByName(tempVector[0].id, buffer);
+               integers.getIdByElement(buffer, id);
+               buffer.setValue(stoi(tempVector[1].id));
+               
+               integers.setElementById(id, buffer);
+            }
+
             while (!tempStack.empty()) {
                string tmpstr = tempStack.top();
                tempVector.push_back(PostfixElem(tmpstr));
@@ -1324,12 +1336,9 @@ class Translator {
                PostfixVector.push_back(PostfixElem("m" + to_string(m - 1)));
                PostfixVector.push_back(PostfixElem("BP"));
                PostfixVector.push_back(PostfixElem("m" + to_string(m - 2) + ":"));
-
                tempVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
                m++;
-
                tempVector.push_back(PostfixElem(";", 4));
-
                Bparsed = false;
                parseA = false;
                parseB = false;
@@ -1385,10 +1394,11 @@ class Translator {
          int index = 0;
          bool local_error = false;
 
+         fOutToken << ".386\n.model FLAT, C\n\n";
+
          while (!local_error && index < (int)PostfixVector.size())
          {
             stack<PostfixElem> array_stack;
-            bool array_assign_here;
             Int lex_array_assign;
             integers.getElementByName(PostfixVector[index].id, lex_array_assign);
             bool array_assign_is_accepted = false;
@@ -1421,19 +1431,9 @@ class Translator {
 
                   if (PostfixVector[i].table == 5)
                   {
-                     if (i != index)
-                     {
-                        cerr << "Code error: Variable \"" << PostfixVector[i].id << "\" is not initialized!" << endl;
-                        fOutError << "Code error: Variable \"" << PostfixVector[i].id << "\" is not initialized!" << endl;
-                        fOutToken.close();
-                        fOutError.close();
-                        return false;
-                     }
-                     else
-                     {
+                     
                         maybe_uninit_flag = true;
                         maybe_uninit_name = PostfixVector[i].id;
-                     }
                   }
                }
                else
@@ -1452,7 +1452,7 @@ class Translator {
                   {
                      integers.getElementByName(oper1p.id, lex);
                      if (PostfixVector[i].id != "=") {
-                        outcode << "\tfild\tdword [" << oper1p.id << "]\n";
+                        outcode << "\tfild\t" << oper1p.id << "\n";
                      }
 
                   }
@@ -1461,19 +1461,19 @@ class Translator {
                      constants.getElementByValue(oper1p.id, constant);
                      if (PostfixVector[i].id != "=")
                      {
-                           outcode << "\tfild\tdword [const_" << constant.getValue()  << "]\n";
+                           outcode << "\tfild\tconst_" << constant.getValue()  << "\n";
                      }
                   }
 
                   if (oper2p.table == 5)
                   {
                      integers.getElementByName(oper2p.id, lex);
-                        outcode << "\tfild\tdword [" << oper2p.id << "]\n";
+                        outcode << "\tfild\t" << oper2p.id << "\n";
                   }
                   else if (oper2p.table == 6)
                   {
                      constants.getElementByValue(oper2p.id, constant);
-                     outcode << "\tfild\tdword [const_" << constant.getValue() << "_"  << "]\n";
+                     outcode << "\tfild\tconst_" << constant.getValue() << "\n";
                   }
 
                   if (PostfixVector[i].id == "+")
@@ -1543,21 +1543,13 @@ class Translator {
                   }
                   else if (PostfixVector[i].id == "=")
                   {
-                     if (!array_assign_is_accepted)
-                     {
-                        outcode << "\tfistp\tdword [" << oper1p.id << "]\n";
+                        outcode << "\tfistp\t" << oper1p.id << "\n";
                         Int temp;
                         int id;
                         integers.getElementByName(PostfixVector[index].id, temp);
                         integers.getIdByElement(temp, id);
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
-                     }
-                     else
-                     {
-                        outcode << "\tpop\t\tedx\n";
-                        outcode << "\tfistp\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                     }
 
                   }
                   else if (PostfixVector[i].id == "+=")
@@ -1570,18 +1562,8 @@ class Translator {
                         fOutError.close();
                         return false;
                      }
-                     if (!array_assign_is_accepted)
-                     {
                         outcode << "\tfadd\n";
-                        outcode << "\tfistp\tdword [" << oper1p.id << "]\n";
-                     }
-                     else
-                     {
-                        outcode << "\tpop\t\tedx\n";
-                        outcode << "\tfild\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                        outcode << "\tfadd\n";
-                        outcode << "\tfistp\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                     }
+                        outcode << "\tfistp\t" << oper1p.id << "\n";
                   }
                   else if (PostfixVector[i].id == "*=")
                   {
@@ -1593,18 +1575,8 @@ class Translator {
                         fOutError.close();
                         return false;
                      }
-                     if (!array_assign_is_accepted)
-                     {
                         outcode << "\tfmul\n";
-                           outcode << "\tfistp\tdword [" << oper1p.id << "]\n";
-                     }
-                     else
-                     {
-                        outcode << "\tpop\t\tedx\n";
-                           outcode << "\tfild\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                           outcode << "\tfmul\n";
-                           outcode << "\tfistp\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                     }
+                           outcode << "\tfistp\t" << oper1p.id << "\n";
                   }
                   else if (PostfixVector[i].id == "-=")
                   {
@@ -1616,22 +1588,12 @@ class Translator {
                         fOutError.close();
                         return false;
                      }
-                     if (!array_assign_is_accepted)
-                     {
                         if (oper2p.id == "last" && oper1p.id != "last")
                            outcode << "\tfsubr\n";
                         else
                            outcode << "\tfsub\n";
                         
-                        outcode << "\tfistp\tdword [" << oper1p.id << "]\n";
-                     }
-                     else
-                     {
-                        outcode << "\tpop\t\tedx\n";
-                           outcode << "\tfild\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                           outcode << "\tfsubr\n";
-                           outcode << "\tfistp\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
-                     }
+                        outcode << "\tfistp\t[" << oper1p.id << "\n";
                   }
                   parse_stack.push(PostfixElem("last"));
                }
@@ -1675,7 +1637,7 @@ class Translator {
          stringstream bss_out;
          bool need_bss = false;
 
-         fOutToken << "section .data\n";
+         fOutToken << ".data\n";
          for (int i = 0; i < (int)variables.size(); i++)
          {
             Int lex;
@@ -1683,50 +1645,18 @@ class Translator {
             {
                integers.getElementByName(variables[i].id, lex);
                
-                  if (lex.getIsInit() == 0)
+                  if (lex.getIsInit())
                   {
-                     fOutToken << "\t" << variables[i].id << ":\tdd\t";
-                     if (values[i] == "")
-                        fOutToken << "0\n";
-                     else
-                     {
-                        if (values[i].find(".") != string::npos)
-                        {
-                           stringstream a_type_force;
-                           a_type_force << values[i];
-                           float i_type_force;
-                           a_type_force >> i_type_force;
-                           fOutToken << (int)round(i_type_force) << "\n";
-                        }
-                        else
-                           fOutToken << values[i] << "\n";
-                     }
-                     if (need_printf)
-                     {
-                        fOutToken << "\tmsg_" << variables[i].id << "_"  << ":\tdb\t\"" << variables[i].id << "\",0\n";
-                        printf_out << "\tpush\tdword msg_" << variables[i].id << "_"  << "\n";
-                        printf_out << "\tpush\tdword printf_str_"  << "\n";
-                        printf_out << "\tcall\tprintf\n\tadd\t\tesp, 8\n";
-                        printf_out << "\tpush\tdword [" << variables[i].id << "]\n";
-                        printf_out << "\tpush\tdword printf_int_"  << "\n";
-                        printf_out << "\tcall\tprintf\n\tadd\t\tesp, 8\n";
-                     }
+                     need_bss = true;
+                     Int buffer;
+                     integers.getElementByName(variables[i].id, buffer);
+                     bss_out << "\t" << variables[i].id << ":\tdd\t" << buffer.getValue() << "\n";
                   }
                   else
                   {
                      need_bss = true;
-                     bss_out << "\t" << variables[i].id << ":\tresd\t" << 1 << "\n";
-                     if (need_printf)
-                     {
-                        fOutToken << "\tmsg_" << variables[i].id << "_"  << ":\tdb\t\"" << variables[i].id << "\",0\n";
-                           printf_out << "\tmov\t\tedx, " << 0 << "\n";
-                           printf_out << "\tpush\tedx" << "\n";
-                           printf_out << "\tpush\tdword msg_" << variables[i].id << "_"  << "\n";
-                           printf_out << "\tcall\tprintf\n\tadd\t\tesp, 12\n";
-                           printf_out << "\tpush\tdword [" << variables[i].id << "+" << 0 << "*4]\n";
-                           printf_out << "\tpush\tdword printf_int_"  << "\n";
-                           printf_out << "\tcall\tprintf\n\tadd\t\tesp, 8\n";
-                     }
+                     
+                     bss_out << "\t" << variables[i].id << ":\tdd\t" << "?"<< "\n";
                   }
             } else {
                int hash, chain;
@@ -1740,22 +1670,20 @@ class Translator {
          {
             fOutToken << "\ttmp_var_int_"  << ":\tdd\t0\n";
          }
-         if (need_printf)
-         {
-            fOutToken << "\tprintf_int_"  << ":\tdb\t\"%i\",10,0\n";
-            fOutToken << "\tprintf_str_"  << ":\tdb\t\"%s = \",0\n";
-         }
          if (need_bss)
          {
             
-            fOutToken << "section .bss\n" << bss_out.str();
+            fOutToken << bss_out.str();
          }
 
-         fOutToken << "section .text\n\tglobal main\nmain:\n";
+         fOutToken << "\n.code\nmain proc\n";
          //fOutToken << "\tfinit\n";
+         outcode << "\tmov\t\teax, 0\n\tret\n";
+         outcode << "main endp\n\nend main";
+
          fOutToken << outcode.str();
          fOutToken << printf_out.str();
-         fOutToken << "\tmov\t\teax, 0\n\tret\n";
+         
 
          fOutToken.close();
          fOutError.close();
@@ -1774,7 +1702,7 @@ int main() {
 
    t.postfixOutput("tree.txt");
 
-   //t.castToAsm("asmFile.txt", "errorFile.txt", false, false);
+   t.castToAsm("asmFile.txt", "errorFile.txt", false, false);
 
    return 0;
 }

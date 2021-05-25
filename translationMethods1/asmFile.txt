@@ -1,30 +1,19 @@
-section .data
-	const_3:	dd	3
-	const_15:	dd	15
-	const_4:	dd	4
-	tmp_var_int_:	dd	0
-section .bss
-	a:	resd	1
-section .text
-	global main
-main:
+.386
+.model FLAT, C
+
+.data
+	a:	dd	16
+	b:	dd	3
+
+.code
+main proc
 	finit
-	fild	dword [a]
-	fild	dword [const_3_]
-	fcomp
-	fistp	dword [tmp_var_int_]
-	fstsw	ax
-	sahf
-	je lbl_eq_2_
-	fldz
-	jmp lbl_ex_2_
-lbl_eq_2_:
-	fld1
-lbl_ex_2_:
-	finit
-	fild	dword [const_15]
-	fild	dword [const_4_]
-	fsub
-	fistp	dword [a]
+	fild	a
+	fild	b
+	fadd
+	fistp	b
 	mov		eax, 0
 	ret
+main endp
+
+end main
