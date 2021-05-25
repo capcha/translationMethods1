@@ -1332,7 +1332,6 @@ class Translator {
             } else if (Bparsed && parseC) {
                PostfixVector.pop_back();
                PostfixVector.pop_back();
-               PostfixVector.pop_back();
                PostfixVector.push_back(PostfixElem("m" + to_string(m - 1)));
                PostfixVector.push_back(PostfixElem("BP"));
                PostfixVector.push_back(PostfixElem("m" + to_string(m - 2) + ":"));
@@ -1441,7 +1440,7 @@ class Translator {
                   PostfixElem oper1p, oper2p;
                   int type1 = 0, type2 = 0;
                   Int lex;
-                  Constant constant;
+                  Constant constant; 
 
                   oper2p = parse_stack.top();
                   parse_stack.pop();
@@ -1494,18 +1493,18 @@ class Translator {
                   else if (PostfixVector[i].id == "==")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
+                     outcode << "\tfistp\ttmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      outcode << "\tje lbl_eq_" << i << "_"  << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
-                     outcode << "lbl_eq_" << i << "_"  << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_"  << ":\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_" << PostfixVector[i + 1] << "\n";
+                     outcode << "lbl_eq_" << i << "_" << PostfixVector[i + 1] << ":\n\tfld1\n";
+                     outcode << "lbl_ex_" << i << "_" << PostfixVector[i + 1] << ":\n";
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "!=")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
+                     outcode << "\tfistp\ttmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      outcode << "\tjne lbl_ne_" << i << "_"  << "\n";
                      outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
@@ -1516,7 +1515,7 @@ class Translator {
                   else if (PostfixVector[i].id == ">")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
+                     outcode << "\tfistp\ttmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      if (oper2p.id == "last" && oper1p.id != "last")
                         outcode << "\tja lbl_gt_" << i << "_"  << "\n";
@@ -1530,7 +1529,7 @@ class Translator {
                   else if (PostfixVector[i].id == "<")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
+                     outcode << "\tfistp\ttmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      if (oper2p.id == "last" && oper1p.id != "last")
                         outcode << "\tjb lbl_lt_" << i << "_"  << "\n";

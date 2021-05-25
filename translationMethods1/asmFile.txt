@@ -2,15 +2,16 @@
 .model FLAT, C
 
 .data
+	const_3:	dd	3
 	a:	dd	16
 	b:	dd	3
 
 .code
 main proc
 	finit
-	fild	a
 	fild	b
-	fadd
+	fild	const_3
+	fmul
 	fistp	b
 	mov		eax, 0
 	ret
