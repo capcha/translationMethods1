@@ -549,6 +549,8 @@ class Translator {
       ifstream fIn, fInToken;
       ofstream fOutToken, fOutError;
 
+      int m = 1; // метка
+
       vector<StateTableRow> newTable; 
       stack<int> ParseStack; 
 
@@ -960,6 +962,7 @@ class Translator {
 
    public:
       vector<PostfixElem> PostfixVector;
+      bool parseA = false, parseB = false, parseC = false, Aparsed = false, Bparsed = false;
 
       Translator() {
          alphabet = ImmutableTable<AlphabetUnit>("Alphabet.txt"); //1
@@ -1048,7 +1051,6 @@ class Translator {
          int type_type = 0;      // Если находимся, то какой тип объявляем
          bool need_postfix = false;      // Нужно ли выполнять построение постфиксной записи для данной строки
          vector<Token> code_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
-         bool need_array_resize = false;         // Объявляем ли мы сейчас размер массива
          vector<Token> array_resize_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
          bool eof_flag = fInToken.eof();    // Флаг конца файла (чтобы считать последний токен)
 
@@ -1086,23 +1088,40 @@ class Translator {
 
             // Если нашли
             if (find_terminal) {
-               
 
                if (newTable[currentRow].getStack())
                   ParseStack.push(currentRow + 1);
 
                if (newTable[currentRow].getAccept())
                {
-                  if ((tokenValue == "ID") &&
+                  if (tokenValue == "ID" &&
                      (getValue(nextToken) == "=" ||
                         getValue(nextToken) == "+=" ||
                         getValue(nextToken) == "-=" ||
                         getValue(nextToken) == "*=" && !isInt))
                      need_postfix = true;
 
-                  if ((tokenValue == "ID") && isInt)
-                     need_array_resize = true;
 
+                  if (tokenValue == "if") {
+                     parseA = true;
+                     need_postfix = true;
+                  }
+
+                  if (parseA && Aparsed) {
+                     parseB = true;
+                     need_postfix = true;
+                  }
+
+                  if (parseB && parseA && Bparsed) {
+                     parseB = true;
+                     need_postfix = true;
+                  }
+
+                  if (tokenValue == "else" ) {
+                     parseC = true;
+                     need_postfix = true;
+                  }
+                  
                   // Обработка необъявленного типа
                   if (tokenValue == "=" && currentToken.getTableId() == 5)
                   {
@@ -1120,29 +1139,17 @@ class Translator {
                      code_expr_infix.push_back(currentToken);
                   }
 
-                  if (need_array_resize) {
-                     array_resize_expr_infix.push_back(currentToken);
-                  }
-
                   // Если закончили разбор присваивания или части объявления
-                  if (tokenValue == ";" || tokenValue == ",")
+                  if (tokenValue == ";" || tokenValue == "," || (parseA && tokenValue == "{"))
                   {
                      // Добавим все, что разобрали, в постфиксную запись
                      if (!postfixExpr(code_expr_infix))
                         errorFlag = true;
-                     if (need_array_resize && !errorFlag)
-                     {
-                        vector<PostfixElem> array_resize_vect;
-                        if (!postfixExpr(array_resize_expr_infix, array_resize_vect))
-                        {
-                           errorFlag = true;
-                        }
-                     }
+                     
                      // Сбрасываем все флаги
                      code_expr_infix.clear();
                      array_resize_expr_infix.clear();
                      need_postfix = false;
-                     need_array_resize = false;
                   }
 
                   // Если закончили разбор объявления, сбросим флаг объявления
@@ -1239,6 +1246,7 @@ class Translator {
          stack<string> tempStack;
          bool errorFlag = false;
          int index = 0;
+
          while (index < (int)t.size() && !errorFlag)
          {
             int i;
@@ -1294,8 +1302,40 @@ class Translator {
                tempVector.push_back(PostfixElem(tmpstr));
                tempStack.pop();
             }
-            tempVector.push_back(PostfixElem(";", 4));
+            if (!parseA && !parseB && !parseC && !Aparsed && !Bparsed) {
+               tempVector.push_back(PostfixElem(";", 4));
+            }
          }
+         if (parseA && !parseB) {
+            tempVector.push_back(PostfixElem("m" + to_string(m++)));
+            tempVector.push_back(PostfixElem("UPL"));
+            Aparsed = true;
+            parseA = false;
+         } else if (Aparsed) {
+               tempVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
+               m++;
+               tempVector.push_back(PostfixElem(";", 4));
+               Bparsed = true;
+               Aparsed = false;
+            } else if (Bparsed && parseC) {
+               PostfixVector.pop_back();
+               PostfixVector.pop_back();
+               PostfixVector.pop_back();
+               PostfixVector.push_back(PostfixElem("m" + to_string(m - 1)));
+               PostfixVector.push_back(PostfixElem("BP"));
+               PostfixVector.push_back(PostfixElem("m" + to_string(m - 2) + ":"));
+
+               tempVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
+               m++;
+
+               tempVector.push_back(PostfixElem(";", 4));
+
+               Bparsed = false;
+               parseA = false;
+               parseB = false;
+               parseC = false;
+            }
+               
          return true;
       }
 
@@ -1328,36 +1368,6 @@ class Translator {
          if (oper1Weight <= oper2Weight) return true;
          return false;
       };
-   
-      /*string calc_salt(int length)
-      {
-         string postfix_str = "";
-         for (int i = 0; i < (int)PostfixVector.size(); i++)
-            postfix_str.appendPostfixVector[i].id;
-         locale loc;
-         const collate<char>& coll = use_facet<collate<char> >(loc);
-         unsigned long salt_long = coll.hash(postfix_str.data(), postfix_str.data() + postfix_str.length());
-         unsigned long salt_long_orig = salt_long;
-         unsigned long salt_long_new = salt_long >> 5;
-         stringstream a;
-         while ((int)a.str().length() < length)
-         {
-            unsigned char c = (salt_long - (salt_long_new << 5));
-            if (c < 10) c += '0';
-            else if (c < 36) c += 'A' - 10;
-            else c = '_';
-            a << c;
-            salt_long = salt_long_new;
-            salt_long_new = salt_long_new >> 5;
-            if (salt_long_new == 0)
-            {
-               salt_long_orig = salt_long_orig >> 1;
-               salt_long = salt_long_orig;
-               salt_long_new = salt_long >> 5;
-            }
-         }
-         return a.str();
-      }*/
 
       // Генерация кода
       bool castToAsm(string asmFile, string errorFile, bool need_printf, bool need_salt)
@@ -1365,8 +1375,6 @@ class Translator {
          fOutToken.open(asmFile.c_str(), ios::in);
          fOutError.open(errorFile.c_str(), ios::out);
 
-         string salt;
-         salt = "";
          bool need_adv_int = false;
 
          stack<PostfixElem> parse_stack;
@@ -1443,11 +1451,8 @@ class Translator {
                   if (oper1p.table == 5)
                   {
                      integers.getElementByName(oper1p.id, lex);
-                     if (PostfixVector[i].id != "="
-                        /*&& PostfixVector[i].id != "+=" && PostfixVector[i].id != "-=" && PostfixVector[i].id != "*="*/)
-                     {
-                           outcode << "\tfild\tdword [" << oper1p.id << "]\n";
-                        //cout << oper1p.id << "loaded\n";
+                     if (PostfixVector[i].id != "=") {
+                        outcode << "\tfild\tdword [" << oper1p.id << "]\n";
                      }
 
                   }
@@ -1456,7 +1461,7 @@ class Translator {
                      constants.getElementByValue(oper1p.id, constant);
                      if (PostfixVector[i].id != "=")
                      {
-                           outcode << "\tfild\tdword [const_" << constant.getValue() << salt << "]\n";
+                           outcode << "\tfild\tdword [const_" << constant.getValue()  << "]\n";
                      }
                   }
 
@@ -1468,7 +1473,7 @@ class Translator {
                   else if (oper2p.table == 6)
                   {
                      constants.getElementByValue(oper2p.id, constant);
-                     outcode << "\tfild\tdword [const_" << constant.getValue() << "_" <<  salt << "]\n";
+                     outcode << "\tfild\tdword [const_" << constant.getValue() << "_"  << "]\n";
                   }
 
                   if (PostfixVector[i].id == "+")
@@ -1489,51 +1494,51 @@ class Translator {
                   else if (PostfixVector[i].id == "==")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_" << salt << "]\n";
+                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
-                     outcode << "\tje lbl_eq_" << i << "_" << salt << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_" << salt << "\n";
-                     outcode << "lbl_eq_" << i << "_" << salt << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_" << salt << ":\n";
+                     outcode << "\tje lbl_eq_" << i << "_"  << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
+                     outcode << "lbl_eq_" << i << "_"  << ":\n\tfld1\n";
+                     outcode << "lbl_ex_" << i << "_"  << ":\n";
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "!=")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_" << salt << "]\n";
+                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
-                     outcode << "\tjne lbl_ne_" << i << "_" << salt << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_" << salt << "\n";
-                     outcode << "lbl_ne_" << i << "_" << salt << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_" << salt << ":\n";
+                     outcode << "\tjne lbl_ne_" << i << "_"  << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
+                     outcode << "lbl_ne_" << i << "_"  << ":\n\tfld1\n";
+                     outcode << "lbl_ex_" << i << "_"  << ":\n";
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == ">")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_" << salt << "]\n";
+                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      if (oper2p.id == "last" && oper1p.id != "last")
-                        outcode << "\tja lbl_gt_" << i << "_" << salt << "\n";
+                        outcode << "\tja lbl_gt_" << i << "_"  << "\n";
                      else
-                        outcode << "\tjb lbl_gt_" << i << "_" << salt << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_" << salt << "\n";
-                     outcode << "lbl_gt_" << i << "_" << salt << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_" << salt << ":\n";
+                        outcode << "\tjb lbl_gt_" << i << "_"  << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
+                     outcode << "lbl_gt_" << i << "_"  << ":\n\tfld1\n";
+                     outcode << "lbl_ex_" << i << "_"  << ":\n";
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "<")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\tdword [tmp_var_int_" << salt << "]\n";
+                     outcode << "\tfistp\tdword [tmp_var_int_"  << "]\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      if (oper2p.id == "last" && oper1p.id != "last")
-                        outcode << "\tjb lbl_lt_" << i << "_" << salt << "\n";
+                        outcode << "\tjb lbl_lt_" << i << "_"  << "\n";
                      else
-                        outcode << "\tja lbl_lt_" << i << "_" << salt << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_" << salt << "\n";
-                     outcode << "lbl_lt_" << i << "_" << salt << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_" << salt << ":\n";
+                        outcode << "\tja lbl_lt_" << i << "_"  << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
+                     outcode << "lbl_lt_" << i << "_"  << ":\n\tfld1\n";
+                     outcode << "lbl_ex_" << i << "_"  << ":\n";
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "=")
@@ -1613,7 +1618,6 @@ class Translator {
                      }
                      if (!array_assign_is_accepted)
                      {
-                        //if(oper2p.id == "last")
                         if (oper2p.id == "last" && oper1p.id != "last")
                            outcode << "\tfsubr\n";
                         else
@@ -1628,8 +1632,6 @@ class Translator {
                            outcode << "\tfsubr\n";
                            outcode << "\tfistp\tdword [" << lex_array_assign.getName() << "+edx*4]\n";
                      }
-                     //cout << "Minus stack size " << parse_stack.size() << endl;
-                     //cout << "Elems " << oper1p.id << " " << oper2p.id << endl;
                   }
                   parse_stack.push(PostfixElem("last"));
                }
@@ -1701,12 +1703,12 @@ class Translator {
                      }
                      if (need_printf)
                      {
-                        fOutToken << "\tmsg_" << variables[i].id << "_" << salt << ":\tdb\t\"" << variables[i].id << "\",0\n";
-                        printf_out << "\tpush\tdword msg_" << variables[i].id << "_" << salt << "\n";
-                        printf_out << "\tpush\tdword printf_str_" << salt << "\n";
+                        fOutToken << "\tmsg_" << variables[i].id << "_"  << ":\tdb\t\"" << variables[i].id << "\",0\n";
+                        printf_out << "\tpush\tdword msg_" << variables[i].id << "_"  << "\n";
+                        printf_out << "\tpush\tdword printf_str_"  << "\n";
                         printf_out << "\tcall\tprintf\n\tadd\t\tesp, 8\n";
                         printf_out << "\tpush\tdword [" << variables[i].id << "]\n";
-                        printf_out << "\tpush\tdword printf_int_" << salt << "\n";
+                        printf_out << "\tpush\tdword printf_int_"  << "\n";
                         printf_out << "\tcall\tprintf\n\tadd\t\tesp, 8\n";
                      }
                   }
@@ -1716,13 +1718,13 @@ class Translator {
                      bss_out << "\t" << variables[i].id << ":\tresd\t" << 1 << "\n";
                      if (need_printf)
                      {
-                        fOutToken << "\tmsg_" << variables[i].id << "_" << salt << ":\tdb\t\"" << variables[i].id << "\",0\n";
+                        fOutToken << "\tmsg_" << variables[i].id << "_"  << ":\tdb\t\"" << variables[i].id << "\",0\n";
                            printf_out << "\tmov\t\tedx, " << 0 << "\n";
                            printf_out << "\tpush\tedx" << "\n";
-                           printf_out << "\tpush\tdword msg_" << variables[i].id << "_" << salt << "\n";
+                           printf_out << "\tpush\tdword msg_" << variables[i].id << "_"  << "\n";
                            printf_out << "\tcall\tprintf\n\tadd\t\tesp, 12\n";
                            printf_out << "\tpush\tdword [" << variables[i].id << "+" << 0 << "*4]\n";
-                           printf_out << "\tpush\tdword printf_int_" << salt << "\n";
+                           printf_out << "\tpush\tdword printf_int_"  << "\n";
                            printf_out << "\tcall\tprintf\n\tadd\t\tesp, 8\n";
                      }
                   }
@@ -1736,12 +1738,12 @@ class Translator {
 
          if (need_adv_int)
          {
-            fOutToken << "\ttmp_var_int_" << salt << ":\tdd\t0\n";
+            fOutToken << "\ttmp_var_int_"  << ":\tdd\t0\n";
          }
          if (need_printf)
          {
-            fOutToken << "\tprintf_int_" << salt << ":\tdb\t\"%i\",10,0\n";
-            fOutToken << "\tprintf_str_" << salt << ":\tdb\t\"%s = \",0\n";
+            fOutToken << "\tprintf_int_"  << ":\tdb\t\"%i\",10,0\n";
+            fOutToken << "\tprintf_str_"  << ":\tdb\t\"%s = \",0\n";
          }
          if (need_bss)
          {
@@ -1772,7 +1774,7 @@ int main() {
 
    t.postfixOutput("tree.txt");
 
-   t.castToAsm("asmFile.txt", "errorFile.txt", false, false);
+   //t.castToAsm("asmFile.txt", "errorFile.txt", false, false);
 
    return 0;
 }
