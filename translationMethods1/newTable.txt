@@ -63,8 +63,8 @@ if	|	60	1	0	0	1
 {	|	64	1	0	0	1
 ;	ID  return int if } |	16	0	1	0	1
 }	|	66	1	0	0	1
-else	ID int return } if 	|	71	0	1	0	1
-;	ID  return int if }	|	16	0	0	0	1
+else ID int return } if 	|	71	0	1	0	1
+; ID return int if }	|	16	0	0	0	1
 ( ID	|	112	0	1	0	1
 == != <	|	89	0	1	0	1
 ( ID	|	112	0	0	0	1
@@ -111,5 +111,5 @@ ID	|	111		1	0	0	1
 ;	|	10		1	0	0	1
 ID	|	0		1	0	1	1
 return	|	110		1	0	0	0
-else ID int return } |	0	1	0	1	0
+else ID int return } |	0	0	0	1	0
 if | 0	0	0	1	1

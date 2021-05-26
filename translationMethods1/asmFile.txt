@@ -2,16 +2,25 @@
 .model FLAT, C
 
 .data
-	const_3:	dd	3
-	a:	dd	16
-	b:	dd	3
+	const_13	dd	13
+	tmp_var_int_m1	dd	0
+	a	dd	100
+	b	dd	13
 
 .code
 main proc
 	finit
+	fild	a
 	fild	b
-	fild	const_3
-	fmul
+	fcomp
+	fistp	tmp_var_int_m1
+	fstsw	ax
+	sahf
+	je lbl_eq_m1
+	fldz
+	jmp lbl_ex_m1
+lbl_eq_m1:
+	fild	const_13
 	fistp	b
 	mov		eax, 0
 	ret

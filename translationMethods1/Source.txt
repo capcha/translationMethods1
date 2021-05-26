@@ -1,7 +1,11 @@
 void main() {
   int a = 16, b = 3;
 
-  b = b * 3;
-
+  if (a == b) {
+	b = 13;
+	
+  } else {
+	b = 14;
+  }
   return 0;
 }
