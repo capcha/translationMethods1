@@ -1121,6 +1121,11 @@ class Translator {
                   }
 
                   if (tokenValue == "else") {
+                     PostfixVector.pop_back();
+                     PostfixVector.pop_back();
+                     PostfixVector.push_back(PostfixElem("m" + to_string(m - 1)));
+                     PostfixVector.push_back(PostfixElem("BP"));
+                     PostfixVector.push_back(PostfixElem("m" + to_string(m - 2) + ":"));
                      parseC = true;
                      need_postfix = true;
                   }
@@ -1162,6 +1167,18 @@ class Translator {
                   // Если попался тип, запоминаем его
                   if (tokenValue == "int") {
                      isInt = true;
+                  }
+
+                  if (tokenValue == "}" && Aparsed) {
+                     PostfixVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
+                     m++;
+                     PostfixVector.push_back(PostfixElem(";", 4));
+                  }
+
+                  if (tokenValue == "}" && Bparsed) {
+                     PostfixVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
+                     m++;
+                     PostfixVector.push_back(PostfixElem(";", 4));
                   }
 
                   // Заносим тип в таблицу идентификаторов
@@ -1305,10 +1322,19 @@ class Translator {
 
             if (tempVector.size() == 2 && tempVector[0].table == 5) {
                Int buffer; int id;
-               integers.getElementByName(tempVector[0].id, buffer);
-               integers.getIdByElement(buffer, id);
-               buffer.setValue(stoi(tempVector[1].id));
-               
+               if (tempVector[1].table == 5) {
+                  integers.getElementByName(tempVector[1].id, buffer);
+                  int value = buffer.getValue();
+                  integers.getElementByName(tempVector[0].id, buffer);
+                  integers.getIdByElement(buffer, id);
+                  buffer.setValue(value);
+               }
+               else {
+                  integers.getElementByName(tempVector[0].id, buffer);
+                  integers.getIdByElement(buffer, id);
+                  buffer.setValue(stoi(tempVector[1].id));
+               }
+
                integers.setElementById(id, buffer);
             }
 
@@ -1317,9 +1343,7 @@ class Translator {
                tempVector.push_back(PostfixElem(tmpstr));
                tempStack.pop();
             }
-            if (!parseA && !parseB && !parseC && !Aparsed) {
-               tempVector.push_back(PostfixElem(";", 4));
-            }
+            tempVector.push_back(PostfixElem(";", 4));
          }
          if (parseA && !parseB) {
             tempVector.push_back(PostfixElem("m" + to_string(m++)));
@@ -1327,25 +1351,9 @@ class Translator {
             Aparsed = true;
             parseA = false;
          } else if (Aparsed) {
-               tempVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
-               m++;
-               tempVector.push_back(PostfixElem(";", 4));
                Bparsed = true;
                Aparsed = false;
-            } else if (Bparsed && parseC) {
-               PostfixVector.pop_back();
-               PostfixVector.pop_back();
-               PostfixVector.push_back(PostfixElem("m" + to_string(m - 1)));
-               PostfixVector.push_back(PostfixElem("BP"));
-               PostfixVector.push_back(PostfixElem("m" + to_string(m - 2) + ":"));
-               tempVector.push_back(PostfixElem("m" + to_string(m - 1) + ":"));
-               m++;
-               tempVector.push_back(PostfixElem(";", 4));
-               Bparsed = false;
-               parseA = false;
-               parseB = false;
-               parseC = false;
-            }
+            } 
                
          return true;
       }

@@ -3,8 +3,9 @@
 
 .data
 	const_13	dd	13
+	const_3	dd	3
 	tmp_var_int_m1	dd	0
-	a	dd	100
+	a	dd	-858993460
 	b	dd	13
 
 .code
@@ -13,13 +14,38 @@ main proc
 	fild	a
 	fild	b
 	fcomp
-	fistp	tmp_var_int_m1
+	fistp	tmp_var_int_;
 	fstsw	ax
 	sahf
-	je lbl_eq_m1
+	je lbl_eq_;
 	fldz
-	jmp lbl_ex_m1
+	jmp lbl_ex_;
 lbl_eq_m1:
+	fild	const_13
+	fistp	b
+	finit
+	jmp afterelse_m2
+lbl_ex_m1:
+afterelse_m2:
+	fild	const_3
+	fistp	a
+	mov		eax, 0
+	ret
+main endp
+
+end main4
+	fistp	a
+	mov		eax, 0
+	ret
+main endp
+
+end main_int_;
+	fstsw	ax
+	sahf
+	je lbl_eq_;
+	fldz
+	jmp lbl_ex_;
+lbl_eq_m3:
 	fild	const_13
 	fistp	b
 	mov		eax, 0
