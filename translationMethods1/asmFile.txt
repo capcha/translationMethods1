@@ -3,7 +3,7 @@
 
 .data
 	const_3	dd	3
-	const_13	dd	13
+	const_1	dd	1
 	const_2	dd	2
 	tmp_var_int_m3	dd	0
 	a	dd	13
@@ -25,7 +25,11 @@ lbl_eq_m1:
 	fistp	a
 	jmp afterelse_m2
 lbl_ex_m1:
-	fild	const_13
+	fild	const_1
+	fild	const_3
+	fadd
+	fild	const_3
+	fadd
 	fistp	b
 afterelse_m2:
 	fild	a
@@ -42,10 +46,6 @@ lbl_eq_m4:
 	fistp	a
 lbl_ex_m4:
 	mov		eax, 0
-	ret
-main endp
-
-end main	mov		eax, 0
 	ret
 main endp
 

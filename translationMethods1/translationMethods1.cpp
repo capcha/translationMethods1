@@ -556,7 +556,7 @@ class Translator {
       int m = 1; // метка
 
       vector<StateTableRow> newTable; 
-      stack<int> ParseStack; 
+      stack<int> parseStack; 
 
       struct TreeElement {
          TreeElement *left, *right; 
@@ -730,6 +730,8 @@ class Translator {
                break;
                }
          }
+
+
          return !isErrorFound;
       }
 
@@ -1035,26 +1037,101 @@ class Translator {
                stringNumber++;
             }
          }
+         fOutToken << 4 << '\t' << 3 << '\t' << -1 << endl;
+
          fIn.close();
          fOutToken.close();
          fOutError.close();
          return !isErrorFound;
       }
    
+      bool bracketAnalysis(string tokenFile, string errorFile) {
+        
+         fInToken.open(tokenFile.c_str(), ios::in);
+         fOutError.open(errorFile.c_str(), ios::out);
+         Token currentToken;
+         stack<string> bracketStack;
+
+         int tableId, rowId, chainId;
+
+         streampos oldPointer = fInToken.tellg(), newPointer;
+
+         bool errorFlag = false;    // Флаг конца файла (чтобы считать последний токен)
+
+         string buf;         
+
+         while (getline(fInToken, buf, '\t')) {
+            tableId = stoi(buf);
+            getline(fInToken, buf, '\t');
+            rowId = stoi(buf);
+            getline(fInToken, buf, '\n');
+            chainId = stoi(buf);
+
+            currentToken = Token(tableId, rowId, chainId);
+
+            string tokenValue = getValue(currentToken);
+            trim(tokenValue);
+         
+            if (tokenValue == "{" || tokenValue == "(") {
+               if (!bracketStack.empty()) {
+                  string bracket = bracketStack.top();
+                  if (bracket == "(" && tokenValue == "{") {
+                     errorFlag = true;
+                     fOutError << "Bracket Error: MISMATCH in " << tokenValue  << endl;
+                     cerr << "Bracket Error: MISMATCH in " << tokenValue << endl;
+                     continue;
+                  }
+               }
+               bracketStack.push(tokenValue);
+            }
+
+            if (tokenValue == "}" || tokenValue == ")") {
+               if (!bracketStack.empty()) {
+                  string bracket = bracketStack.top();
+                  if (bracket == "{" && tokenValue == "}" || bracket == "(" && tokenValue == ")") {
+                     bracketStack.pop();
+                  }
+                  else {
+                     errorFlag = true;
+                     fOutError << "Bracket Error: MISMATCH in "  << tokenValue << endl;
+                     cerr << "Bracket Error: MISMATCH in "  << tokenValue << endl;
+                     continue;
+                  }
+               }
+               else {
+                  errorFlag = true;
+                  fOutError << "Bracket Error: MISMATCH in " << tokenValue << endl;
+                  cerr << "Bracket Error: MISMATCH in " << tokenValue  << endl;
+                  continue;
+               }
+            } 
+         }
+
+         if (!bracketStack.empty() && !errorFlag) {
+            errorFlag = true;
+            fOutError << "Bracket Error: MISMATCH" << endl;
+            cerr << "Bracket Error: MISMATCH" << endl;
+         }
+
+         fOutError.close();
+         fInToken.close();
+
+         return errorFlag;
+      }
+   
       // Синтаксический анализатор
       bool syntaxAnalysis(string tokenFile, string errorFile) {
          string str;
-
          fInToken.open(tokenFile.c_str(), ios::in);
          fOutError.open(errorFile.c_str(), ios::out);
          Token currentToken, nextToken;
-         stack<int> ParseStack;
+         stack<int> parseStack;
          bool errorFlag = false;
          int currentRow = 0;
          bool isInt = false; // Находимся ли мы в строке с объявлением типа
          int type_type = 0;      // Если находимся, то какой тип объявляем
          bool need_postfix = false;      // Нужно ли выполнять построение постфиксной записи для данной строки
-         vector<Token> code_expr_infix;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
+         vector<Token> exprVector;  // Если да, то сюда помещаем токены в инфиксном (обычном) порядке
          bool eof_flag = fInToken.eof();    // Флаг конца файла (чтобы считать последний токен)
 
          int tableId, rowId, chainId;
@@ -1089,7 +1166,7 @@ class Translator {
             if (find_terminal) {
 
                if (newTable[currentRow].getStack())
-                  ParseStack.push(currentRow + 1);
+                  parseStack.push(currentRow + 1);
 
                if (newTable[currentRow].getAccept())
                {
@@ -1105,6 +1182,8 @@ class Translator {
                      parseA = true;
                      need_postfix = true;
                   }
+
+                  
 
                   if (parseA && Aparsed) {
                      parseB = true;
@@ -1126,21 +1205,19 @@ class Translator {
                      need_postfix = true;
                   }
                   
-                  
-
                   if (need_postfix) {
-                     code_expr_infix.push_back(currentToken);
+                     exprVector.push_back(currentToken);
                   }
 
                   // Если закончили разбор присваивания или части объявления
                   if (tokenValue == ";" || tokenValue == "," || (parseA && tokenValue == "{"))
                   {
                      // Добавим все, что разобрали, в постфиксную запись
-                     if (!postfixExpr(code_expr_infix))
+                     if (!postfixExpr(exprVector))
                         errorFlag = true;
                      
                      // Сбрасываем все флаги
-                     code_expr_infix.clear();
+                     exprVector.clear();
                      need_postfix = false;
                   }
 
@@ -1199,10 +1276,10 @@ class Translator {
 
                if (newTable[currentRow].getReturnState())
                {
-                  if (!ParseStack.empty())
+                  if (!parseStack.empty())
                   {
-                     currentRow = ParseStack.top();
-                     ParseStack.pop();
+                     currentRow = parseStack.top();
+                     parseStack.pop();
                   }
                   else // Если внезапно стек пуст
                   {
@@ -1389,7 +1466,7 @@ class Translator {
       };
 
       // Генерация кода
-      bool castToAsm(string asmFile, string errorFile, bool need_printf, bool need_salt)
+      bool castToAsm(string asmFile, string errorFile)
       {
          fOutToken.open(asmFile.c_str(), ios::in);
          fOutError.open(errorFile.c_str(), ios::out);
@@ -1611,8 +1688,6 @@ class Translator {
          }
 
          stringstream printf_out;
-         if (need_printf)
-            fOutToken << "extern printf\n";
 
          stringstream bss_out;
          bool need_bss = false;
@@ -1676,13 +1751,14 @@ int main() {
    Translator t;
    t.lexicalAnalysis("Source.txt", "token.txt", "errorFile.txt");
 
-   if (t.syntaxAnalysis("token.txt", "errorFile.txt")) {
-      cout << "Success!!";
+   if (!t.bracketAnalysis("token.txt", "errorFile.txt")) {
+      if (t.syntaxAnalysis("token.txt", "errorFile.txt")) {
+         cout << "Success!!";
+         t.postfixOutput("tree.txt");
+
+         t.castToAsm("asmFile.txt", "errorFile.txt");
+      }
    }
-
-   t.postfixOutput("tree.txt");
-
-   t.castToAsm("asmFile.txt", "errorFile.txt", false, false);
 
    return 0;
 }
