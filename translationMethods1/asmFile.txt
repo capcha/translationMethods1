@@ -45,6 +45,7 @@ lbl_eq_m4:
 	fild	const_2
 	fistp	a
 lbl_ex_m4:
+afterelse_m5:
 	mov		eax, 0
 	ret
 main endp
