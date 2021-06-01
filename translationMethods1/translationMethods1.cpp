@@ -1079,10 +1079,6 @@ class Translator {
             // Ищем терминалы из списка
             bool find_terminal = false;
 
-            if (currentRow == 65) {
-               cout << "adsd/";
-            }
-
             for (int i = 0; i < (int)newTable[currentRow].getTerminal().size() && !find_terminal; i++)
             {
                if (newTable[currentRow].getTerminal()[i] == tokenValue)
@@ -1130,18 +1126,7 @@ class Translator {
                      need_postfix = true;
                   }
                   
-                  // Обработка необъявленного типа
-                  if (tokenValue == "=" && nextToken.getTableId() == 6)
-                  {
-                     Int buffer;
-                     integers.getElementById(currentToken.getRowNumber(), buffer);
-                     if (buffer.getIsInit() == 0)
-                     {
-                        errorFlag = true;
-                        fOutError << "Syntax Error: Undefined identifier \"" << buffer.getName() << "\"" << endl;
-                        cerr << "Syntax Error: Undefined identifier \"" << buffer.getName() << "\"" << endl;
-                     }
-                  }
+                  
 
                   if (need_postfix) {
                      code_expr_infix.push_back(currentToken);
@@ -1189,7 +1174,18 @@ class Translator {
                      buffer.setIsInit(true);
 
                      integers.setElementById(currentToken.getRowNumber(), buffer);
-                  }
+                  } else // Обработка необъявленного типа
+                     if (tokenValue == "ID" && !isInt)
+                     {
+                        Int buffer;
+                        integers.getElementById(currentToken.getRowNumber(), buffer);
+                        if (buffer.getIsInit() == 0)
+                        {
+                           errorFlag = true;
+                           fOutError << "Syntax Error: Undefined identifier \"" << buffer.getName() << "\"" << endl;
+                           cerr << "Syntax Error: Undefined identifier \"" << buffer.getName() << "\"" << endl;
+                        }
+                     }
 
                   eof_flag = fInToken.eof();
                   currentToken = nextToken;
@@ -1402,9 +1398,9 @@ class Translator {
 
          bool need_adv_int = false;
 
-         stack<PostfixElem> parse_stack;
-         vector<PostfixElem> variables;
-         vector<string> values;
+         stack<PostfixElem> postfixStack;
+         vector<PostfixElem> variableVector;
+         vector<string> valueVector;
          stringstream outcode;
 
          int index = 0;
@@ -1414,16 +1410,10 @@ class Translator {
 
          while (!local_error && index < (int)PostfixVector.size())
          {
-            stack<PostfixElem> array_stack;
-            Int lex_array_assign;
-            integers.getElementByName(PostfixVector[index].id, lex_array_assign);
-            bool array_assign_is_accepted = false;
-            //stringstream array_assign_address;
-            bool maybe_uninit_flag = false;
+            Int buf;
+            integers.getElementByName(PostfixVector[index].id, buf);
+            bool isUnar = false;
             string maybe_uninit_name = "";
-
-            /*if (!(PostfixVector[index + 2].id == "=" && PostfixVector[index + 1].table == 6))
-               outcode << "\tfinit\n";*/
 
             int i; 
             for (i = index; !local_error && i < (int)PostfixVector.size() && PostfixVector[i].id != ";"; i++)
@@ -1463,17 +1453,17 @@ class Translator {
                }
                if (PostfixVector[i].table == 5 || PostfixVector[i].table == 6)
                {
-                  parse_stack.push(PostfixVector[i]);
+                  postfixStack.push(PostfixVector[i]);
                   bool added = false;
-                  for (int j = 0; !added && j < (int)variables.size(); j++)
+                  for (int j = 0; !added && j < (int)variableVector.size(); j++)
                   {
-                     if (variables[j] == PostfixVector[i])
+                     if (variableVector[j] == PostfixVector[i])
                         added = true;
                   }
                   if (!added)
                   {
-                     variables.push_back(PostfixVector[i]);
-                     values.push_back("");
+                     variableVector.push_back(PostfixVector[i]);
+                     valueVector.push_back("");
                   }
                   Int lex_array_check;
                   integers.getElementByName(PostfixVector[index].id, lex_array_check);
@@ -1481,7 +1471,7 @@ class Translator {
                   if (PostfixVector[i].table == 5)
                   {
                      
-                        maybe_uninit_flag = true;
+                        isUnar = true;
                         maybe_uninit_name = PostfixVector[i].id;
                   }
                }
@@ -1492,10 +1482,10 @@ class Translator {
                   Int lex;
                   Constant constant; 
 
-                  oper2p = parse_stack.top();
-                  parse_stack.pop();
-                  oper1p = parse_stack.top();
-                  parse_stack.pop();
+                  oper2p = postfixStack.top();
+                  postfixStack.pop();
+                  oper1p = postfixStack.top();
+                  postfixStack.pop();
 
                   if (oper1p.table == 5)
                   {
@@ -1583,50 +1573,7 @@ class Translator {
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
                   }
-                  else if (PostfixVector[i].id == "+=")
-                  {
-                     if (maybe_uninit_flag)
-                     {
-                        cerr << "Code error: Variable \"" << maybe_uninit_name << "\" is not initialized!" << endl;
-                        fOutError << "Code error: Variable \"" << maybe_uninit_name << "\" is not initialized!" << endl;
-                        fOutToken.close();
-                        fOutError.close();
-                        return false;
-                     }
-                        outcode << "\tfadd\n";
-                        outcode << "\tfistp\t" << oper1p.id << "\n";
-                  }
-                  else if (PostfixVector[i].id == "*=")
-                  {
-                     if (maybe_uninit_flag)
-                     {
-                        cerr << "Code error: Variable \"" << maybe_uninit_name << "\" is not initialized!" << endl;
-                        fOutError << "Code error: Variable \"" << maybe_uninit_name << "\" is not initialized!" << endl;
-                        fOutToken.close();
-                        fOutError.close();
-                        return false;
-                     }
-                        outcode << "\tfmul\n";
-                           outcode << "\tfistp\t" << oper1p.id << "\n";
-                  }
-                  else if (PostfixVector[i].id == "-=")
-                  {
-                     if (maybe_uninit_flag)
-                     {
-                        cerr << "Code error: Variable \"" << maybe_uninit_name << "\" is not initialized!" << endl;
-                        fOutError << "Code error: Variable \"" << maybe_uninit_name << "\" is not initialized!" << endl;
-                        fOutToken.close();
-                        fOutError.close();
-                        return false;
-                     }
-                        if (oper2p.id == "last" && oper1p.id != "last")
-                           outcode << "\tfsubr\n";
-                        else
-                           outcode << "\tfsub\n";
-                        
-                        outcode << "\tfistp\t[" << oper1p.id << "\n";
-                  }
-                  parse_stack.push(PostfixElem("last"));
+                  postfixStack.push(PostfixElem("last"));
                }
 
                if (i == index && PostfixVector[i + 2].id == "=" && PostfixVector[i + 1].table == 6)
@@ -1636,9 +1583,9 @@ class Translator {
                   {
                      bool found = false;
                      int j;
-                     for (j = 0; !found && j < (int)variables.size(); j++)
+                     for (j = 0; !found && j < (int)variableVector.size(); j++)
                      {
-                        if (variables[j].id == PostfixVector[i].id)
+                        if (variableVector[j].id == PostfixVector[i].id)
                            found = true;
                      }
                      if (found)
@@ -1649,7 +1596,7 @@ class Translator {
                         integers.getIdByElement(temp, id);
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
-                        values[j - 1] = PostfixVector[i + 1].id;
+                        valueVector[j - 1] = PostfixVector[i + 1].id;
                         if (!isStarted) {
                            i += 2;
                         }
@@ -1658,8 +1605,8 @@ class Translator {
                }
             }
 
-            while (parse_stack.size() > 0)
-               parse_stack.pop();
+            while (postfixStack.size() > 0)
+               postfixStack.pop();
             index = i + 1;
          }
 
@@ -1671,31 +1618,31 @@ class Translator {
          bool need_bss = false;
 
          fOutToken << ".data\n";
-         for (int i = 0; i < (int)variables.size(); i++)
+         for (int i = 0; i < (int)variableVector.size(); i++)
          {
             Int lex;
-            if (variables[i].table == 5)
+            if (variableVector[i].table == 5)
             {
-               integers.getElementByName(variables[i].id, lex);
+               integers.getElementByName(variableVector[i].id, lex);
                
                   if (lex.getIsInit())
                   {
                      need_bss = true;
                      Int buffer;
-                     integers.getElementByName(variables[i].id, buffer);
-                     bss_out << "\t" << variables[i].id << "\tdd\t" << buffer.getValue() << "\n";
+                     integers.getElementByName(variableVector[i].id, buffer);
+                     bss_out << "\t" << variableVector[i].id << "\tdd\t" << buffer.getValue() << "\n";
                   }
                   else
                   {
                      need_bss = true;
                      
-                     bss_out << "\t" << variables[i].id << "\tdd\t" << "?"<< "\n";
+                     bss_out << "\t" << variableVector[i].id << "\tdd\t" << "?"<< "\n";
                   }
             } else {
                int hash, chain;
                Constant constant;
-               constants.getElementByValue(variables[i].id, constant);
-               fOutToken << "\tconst_" << constant.getValue() << "\tdd\t" << variables[i].id << "\n";
+               constants.getElementByValue(variableVector[i].id, constant);
+               fOutToken << "\tconst_" << constant.getValue() << "\tdd\t" << variableVector[i].id << "\n";
             }
          }
 
