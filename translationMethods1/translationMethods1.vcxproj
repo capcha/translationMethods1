@@ -153,6 +153,7 @@
     <Text Include="Separators.txt" />
     <Text Include="Source.txt" />
     <Text Include="token.txt" />
+    <Text Include="token2.txt" />
     <Text Include="tree.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
