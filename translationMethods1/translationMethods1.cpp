@@ -1061,9 +1061,9 @@ class Translator {
 
          bool errorFlag = false;    // Флаг конца файла (чтобы считать последний токен)
 
-         string buf;         
+         string buf, bracket;         
 
-         while (getline(fInToken, buf, '\t')) {
+         while (getline(fInToken, buf, '\t') && !errorFlag) {
             tableId = stoi(buf);
             getline(fInToken, buf, '\t');
             rowId = stoi(buf);
@@ -1077,12 +1077,12 @@ class Translator {
          
             if (tokenValue == "{" || tokenValue == "(") {
                if (!bracketStack.empty()) {
-                  string bracket = bracketStack.top();
+                  bracket = bracketStack.top();
                   if (bracket == "(" && tokenValue == "{") {
                      fOutError << "Bracket Error: MISMATCH in " << tokenValue << endl;
                      cerr << "Bracket Error: MISMATCH in " << tokenValue << endl;
                      bracketStack.pop();
-                     fOutToken << 4 << "\t" << 1 << "\t" << -1 << "\n";
+                     tokenDeque.push_back(Token(4, 1, -1));
                   }
                }
                bracketStack.push(tokenValue);
@@ -1090,12 +1090,11 @@ class Translator {
 
             if (tokenValue == "}" || tokenValue == ")") {
                if (!bracketStack.empty()) {
-                  string bracket = bracketStack.top();
+                  bracket = bracketStack.top();
                   if (bracket == "{" && tokenValue == "}" || bracket == "(" && tokenValue == ")") {
                      bracketStack.pop();
                   }
                   else {
-                     errorFlag = true;
                      fOutError << "Bracket Error: MISMATCH in "  << tokenValue << endl;
                      cerr << "Bracket Error: MISMATCH in "  << tokenValue << endl;
                      if (bracket == "(" && tokenValue == "}") {
@@ -1110,11 +1109,13 @@ class Translator {
                }
                else {
                   errorFlag = true;
-                  fOutError << "Bracket Error: MISMATCH in " << tokenValue << endl;
-                  cerr << "Bracket Error: MISMATCH in " << tokenValue  << endl;
+                  fOutError << "Bracket Error: MISMATCH in " << tokenValue << " stack is empty" << endl;
+                  cerr << "Bracket Error: MISMATCH in " << tokenValue << " stack is empty" << endl;
                }
             } 
-            tokenDeque.push_back(currentToken);
+            if (!(bracket == "{" && tokenValue == ")")) {
+               tokenDeque.push_back(currentToken);
+            }
          }
 
          if (!bracketStack.empty() && !errorFlag) {
@@ -1203,8 +1204,6 @@ class Translator {
                      parseA = true;
                      need_postfix = true;
                   }
-
-                  
 
                   if (parseA && Aparsed) {
                      parseB = true;
@@ -1772,14 +1771,16 @@ int main() {
    Translator t;
    t.lexicalAnalysis("Source.txt", "token.txt", "errorFile.txt");
 
-   t.bracketAnalysis("token.txt", "errorFile.txt", "token2.txt");
+   if (!t.bracketAnalysis("token.txt", "errorFile.txt", "token2.txt")) {
+      if (t.syntaxAnalysis("token2.txt", "errorFile.txt")) {
+         cout << "Success!!";
+         t.postfixOutput("tree.txt");
 
-   if (t.syntaxAnalysis("token2.txt", "errorFile.txt")) {
-      cout << "Success!!";
-      t.postfixOutput("tree.txt");
-
-      t.castToAsm("asmFile.txt", "errorFile.txt");
+         t.castToAsm("asmFile.txt", "errorFile.txt");
+      }
    }
+
+   
    
 
    return 0;
