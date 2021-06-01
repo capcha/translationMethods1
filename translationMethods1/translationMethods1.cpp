@@ -1320,18 +1320,22 @@ class Translator {
             }
             index = i + 1;
 
-            if (tempVector.size() == 2 && tempVector[0].table == 5) {
+            Int buffer;
+            integers.getElementByName(tempVector[0].id, buffer);
+            if (tempVector.size() == 2 && tempVector[0].table == 5 && buffer.getValue() == INT_MIN) {
                Int buffer; int id;
                if (tempVector[1].table == 5) {
                   integers.getElementByName(tempVector[1].id, buffer);
                   int value = buffer.getValue();
                   integers.getElementByName(tempVector[0].id, buffer);
                   integers.getIdByElement(buffer, id);
+                  buffer.setIsInit(true);
                   buffer.setValue(value);
                }
                else {
                   integers.getElementByName(tempVector[0].id, buffer);
                   integers.getIdByElement(buffer, id);
+                  buffer.setIsInit(true);
                   buffer.setValue(stoi(tempVector[1].id));
                }
 
@@ -1394,6 +1398,8 @@ class Translator {
          fOutToken.open(asmFile.c_str(), ios::in);
          fOutError.open(errorFile.c_str(), ios::out);
 
+         int mCount = 0;
+
          bool need_adv_int = false;
 
          stack<PostfixElem> parse_stack;
@@ -1402,7 +1408,7 @@ class Translator {
          stringstream outcode;
 
          int index = 0;
-         bool local_error = false, elseFlag = false;
+         bool local_error = false, elseFlag = false, isStarted = false, isBP = false;
 
          fOutToken << ".386\n.model FLAT, C\n\n";
 
@@ -1416,31 +1422,41 @@ class Translator {
             bool maybe_uninit_flag = false;
             string maybe_uninit_name = "";
 
-            if (!(PostfixVector[index + 2].id == "=" && PostfixVector[index + 1].table == 6))
-               outcode << "\tfinit\n";
+            /*if (!(PostfixVector[index + 2].id == "=" && PostfixVector[index + 1].table == 6))
+               outcode << "\tfinit\n";*/
 
-            int i;
+            int i; 
             for (i = index; !local_error && i < (int)PostfixVector.size() && PostfixVector[i].id != ";"; i++)
             {
                if (PostfixVector[i].id.find("m") != string::npos) {
                   if (PostfixVector[i].id.find(":") != string::npos) {
                      if (!elseFlag) {
+                        if (mCount % 2 == 1 && !isBP) {
+                           outcode << "lbl_ex_" << PostfixVector[i].id.substr(0, PostfixVector[i].id.length() - 1) << ":\n";
+                        }
                         elseFlag = true;
                      }
                      else {
+                        isBP = false;
                         outcode << "afterelse_" << PostfixVector[i] << "\n";
-
                         elseFlag = false;
                      }
+                  }
+                  else {
+                     index += 3;
                   }
                   continue;
                }
                if (PostfixVector[i].id == "UPL") {
+                  isStarted = true;
+                  mCount++;
                   outcode << "lbl_eq_" << PostfixVector[i - 1] << ":\n";
                   continue;
                }
 
                if (PostfixVector[i].id == "BP") {
+                  mCount++;
+                  isBP = true;
                   outcode << "\tjmp afterelse_" << PostfixVector[i - 1].id << "\n";
                   outcode << "lbl_ex_" << PostfixVector[i + 1].id.substr(0, PostfixVector[i + 1].id.length() - 1) << ":\n";
                   continue;
@@ -1527,50 +1543,34 @@ class Translator {
                   else if (PostfixVector[i].id == "==")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\ttmp_var_int_" << PostfixVector[i + 1] << "\n";
+                     outcode << "\tfistp\ttmp_var_int_" << PostfixVector[i + 2] << "\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
-                     outcode << "\tje lbl_eq_" << PostfixVector[i + 1] << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << PostfixVector[i + 1] << "\n";
-                     i++;
+                     outcode << "\tje lbl_eq_" << PostfixVector[i + 2] << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << PostfixVector[i + 2] << "\n";
+                     i += 2;
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "!=")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\ttmp_var_int_"  << "\n";
+                     outcode << "\tfistp\ttmp_var_int_" << PostfixVector[i + 2] << "\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
-                     outcode << "\tjne lbl_ne_" << i << "_"  << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
-                     outcode << "lbl_ne_" << i << "_"  << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_"  << ":\n";
-                     need_adv_int = true;
-                  }
-                  else if (PostfixVector[i].id == ">")
-                  {
-                     outcode << "\tfcomp\n";
-                     outcode << "\tfistp\ttmp_var_int_"  << "\n";
-                     outcode << "\tfstsw\tax\n\tsahf\n";
-                     if (oper2p.id == "last" && oper1p.id != "last")
-                        outcode << "\tja lbl_gt_" << i << "_"  << "\n";
-                     else
-                        outcode << "\tjb lbl_gt_" << i << "_"  << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
-                     outcode << "lbl_gt_" << i << "_"  << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_"  << ":\n";
+                     outcode << "\tjne lbl_eq_" << PostfixVector[i + 2] << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << PostfixVector[i + 2] << "\n";
+                     i += 2;
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "<")
                   {
                      outcode << "\tfcomp\n";
-                     outcode << "\tfistp\ttmp_var_int_"  << "\n";
+                     outcode << "\tfistp\ttmp_var_int_" << PostfixVector[i + 2] << "\n";
                      outcode << "\tfstsw\tax\n\tsahf\n";
                      if (oper2p.id == "last" && oper1p.id != "last")
-                        outcode << "\tjb lbl_lt_" << i << "_"  << "\n";
+                        outcode << "\tjb lbl_eq_" << PostfixVector[i + 2] << "\n";
                      else
-                        outcode << "\tja lbl_lt_" << i << "_"  << "\n";
-                     outcode << "\tfldz\n\tjmp lbl_ex_" << i << "_"  << "\n";
-                     outcode << "lbl_lt_" << i << "_"  << ":\n\tfld1\n";
-                     outcode << "lbl_ex_" << i << "_"  << ":\n";
+                        outcode << "\tja lbl_eq_" << PostfixVector[i + 2] << "\n";
+                     outcode << "\tfldz\n\tjmp lbl_ex_" << PostfixVector[i + 2] << "\n";
+                     i += 2;
                      need_adv_int = true;
                   }
                   else if (PostfixVector[i].id == "=")
@@ -1582,7 +1582,6 @@ class Translator {
                         integers.getIdByElement(temp, id);
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
-
                   }
                   else if (PostfixVector[i].id == "+=")
                   {
@@ -1651,7 +1650,9 @@ class Translator {
                         temp.setIsInit(true);
                         integers.setElementById(id, temp);
                         values[j - 1] = PostfixVector[i + 1].id;
-                        i += 2;
+                        if (!isStarted) {
+                           i += 2;
+                        }
                      }
                   }
                }
@@ -1700,7 +1701,7 @@ class Translator {
 
          if (need_adv_int)
          {
-            fOutToken << "\ttmp_var_int_m" << m - 2 << "\tdd\t0\n";
+            fOutToken << "\ttmp_var_int_m" << mCount << "\tdd\t0\n";
          }
          if (need_bss)
          {

@@ -1,21 +1,8 @@
 void main() {
   int a = 16, b = 3;
 
-  if (a == b) {
+  if (a < b) {
 	b = 13;
-	a = 14;
-	a = 122;
-  } else {
-	a = 144;
-	a = 1443;
-  }
-
-  if (a == b) {
-	b = 1;
-  } else {
-	a = 4;
-  }
-
-
+  } 
   return 0;
 }
